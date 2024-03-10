@@ -16,6 +16,8 @@ jobs:
         shell: "bash"
         run: |
           export PATH="$(pwd)/vendor:$PATH"
+          echo $PATH
+          which yasm
 
           cd FFmpeg
           ls -la
@@ -39,7 +41,15 @@ jobs:
             --enable-postproc \
             --enable-swresample \
             --enable-swscale
+          
+          echo "Removing link as it might conflict"
+          rm -Rf /usr/bin/link
 
+          echo "Compiling"
+          make -j4
+
+          echo "Installing"
+          make install
       - name: Setup tmate session
         if: ${{ failure() }}
         uses: mxschmitt/action-tmate@v3
