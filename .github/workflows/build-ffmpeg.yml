@@ -12,10 +12,11 @@ jobs:
         with:
           submodules: 'true'
       - uses: ilammy/msvc-dev-cmd@v1
+      - uses: msys2/setup-msys2@v2
       - name: Installing dependencies
-        shell: "bash"
+        shell: msys2 {0}
         run: |
-          /usr/bin/pacman -S --noconfirm make
+          pacman -S --noconfirm make
       - name: Build FFmpeg
         shell: "bash"
         run: |
