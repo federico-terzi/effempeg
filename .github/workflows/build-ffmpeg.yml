@@ -35,22 +35,19 @@ jobs:
             --target-os=win64 \
             --arch=x86_64 \
             --disable-debug \
-            # --disable-filters \
-            # --disable-encoders \ 
-            # --disable-decoders \ 
             --enable-stripping \
             --enable-shared \
             --shlibdir=SHARED_LIBS \
             --enable-pic \
             --disable-autodetect \
             --disable-programs \
-            # --enable-avcodec \
+            --enable-avcodec \
             --disable-avdevice \
-            # --enable-avfilter \
-            # --enable-avformat \
-            # --enable-avutil \
-            # --enable-postproc \
-            # --enable-swresample \
+            --enable-avfilter \
+            --enable-avformat \
+            --enable-avutil \
+            --enable-postproc \
+            --enable-swresample \
             --enable-swscale
       - name: Build FFmpeg
         shell: msys2 {0}
