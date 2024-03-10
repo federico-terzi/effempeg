@@ -55,7 +55,7 @@ jobs:
           export PATH="$(pwd)/vendor:$PATH"
           echo $PATH
           which yasm
-          
+
           cd FFmpeg
           ls -la
           pwd
@@ -64,7 +64,7 @@ jobs:
           rm -Rf /usr/bin/link
 
           echo "Compiling"
-          /usr/bin/make -j4
+          /usr/bin/make -j8
 
           echo "Installing"
           /usr/bin/make install
@@ -72,7 +72,7 @@ jobs:
         run: |
           $sha = git rev-parse HEAD
           $zipName = "${sha}_x86_64-pc-windows-msvc.zip"
-          Compress-Archive -Path "SHARED_LIBS" -DestinationPath $zipName
+          Compress-Archive -Path "FFmpeg/SHARED_LIBS" -DestinationPath $zipName
 
           # Pass zip name to next step
           echo "::set-output name=zipName::$zipName"
