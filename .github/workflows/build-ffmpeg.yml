@@ -18,11 +18,13 @@ jobs:
         run: |
           pacman -S --noconfirm make
       - name: Build FFmpeg
-        shell: "bash"
+        shell: msys2 {0}
         run: |
           export PATH="$(pwd)/vendor:$PATH"
           echo $PATH
           which yasm
+          which cl
+          which link
 
           cd FFmpeg
           ls -la
