@@ -1,0 +1,2 @@
+# effempeg
+Experiements with FFmpeg
