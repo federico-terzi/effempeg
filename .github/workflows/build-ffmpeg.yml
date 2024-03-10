@@ -9,5 +9,31 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Prepare dependencies
+        run: |
+          Copy-Item -Path "vendor\yasm.exe" -Destination "C:\Program Files\CMake\bin"
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Build FFmpeg
+        working-directory: ./FFmpeg
+        run: |
+          ./configure --toolchain=msvc \
+            --target-os=win64 \
+            --arch=x86_64 \
+            --disable-debug \
+            --enable-stripping \
+            --enable-shared \
+            --shlibdir=SHARED_LIBS \
+            --enable-pic \
+            --disable-autodetect \
+            --disable-programs \
+            --enable-avcodec \
+            --disable-avdevice \
+            --enable-avfilter \
+            --enable-avformat \
+            --enable-avutil \
+            --enable-postproc \
+            --enable-swresample \
+            --enable-swscale
+
       - name: Setup tmate session
         uses: mxschmitt/action-tmate@v3
