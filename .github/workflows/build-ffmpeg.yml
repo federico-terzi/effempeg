@@ -19,8 +19,6 @@ jobs:
           echo $PATH
           which yasm
 
-          which nasm
-
           cd FFmpeg
           ls -la
           pwd
