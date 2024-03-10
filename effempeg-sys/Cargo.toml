@@ -5,6 +5,7 @@ build   = "build.rs"
 links   = "ffmpeg"
 
 authors = ["meh. <meh@schizofreni.co>", "Zhiming Wang <i@zhimingwang.org>"]
+repository = "https://github.com/federico-terzi/effempeg"
 license = "WTFPL"
 
 [lib]
