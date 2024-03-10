@@ -80,11 +80,10 @@ jobs:
           # Pass zip name to next step
           echo "{zipName}={$zipName}" >> $GITHUB_OUTPUT
       - name: "Publish as release"
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
-          files: $zipName
+          files: "*msvc.zip"
           tag_name: ${{ github.sha }}
-          release_name: ${{ github.sha }}
           draft: false
           prerelease: false
       # - name: Setup tmate session
