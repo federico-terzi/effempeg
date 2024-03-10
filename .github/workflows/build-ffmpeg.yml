@@ -14,9 +14,10 @@ jobs:
           Copy-Item -Path "vendor\yasm.exe" -Destination "C:\Program Files\CMake\bin"
       - uses: ilammy/msvc-dev-cmd@v1
       - name: Build FFmpeg
-        working-directory: ./FFmpeg
         shell: "bash"
         run: |
+          cd FFmpeg
+
           ./configure --toolchain=msvc \
             --target-os=win64 \
             --arch=x86_64 \
