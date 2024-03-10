@@ -157,27 +157,6 @@ fn search() -> PathBuf {
     absolute
 }
 
-fn fetch() -> io::Result<()> {
-    let output_base_path = output();
-    let clone_dest_dir = format!("ffmpeg-{}", version());
-    let _ = std::fs::remove_dir_all(output_base_path.join(&clone_dest_dir));
-    let status = Command::new("git")
-        .current_dir(&output_base_path)
-        .arg("clone")
-        .arg("--depth=1")
-        .arg("-b")
-        .arg(format!("release/{}", version()))
-        .arg("https://github.com/FFmpeg/FFmpeg")
-        .arg(&clone_dest_dir)
-        .status()?;
-
-    if status.success() {
-        Ok(())
-    } else {
-        Err(io::Error::new(io::ErrorKind::Other, "fetch failed"))
-    }
-}
-
 fn switch(configure: &mut Command, feature: &str, name: &str) {
     let arg = if env::var("CARGO_FEATURE_".to_string() + feature).is_ok() {
         "--enable-"

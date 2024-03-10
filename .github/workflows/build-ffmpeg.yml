@@ -1,0 +1,13 @@
+name: build-ffmpeg
+on:
+  push:
+  # TODO: add filter so that it only runs on master when something relevant changes
+
+jobs:
+  build-windows:
+    name: Build FFMpeg Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
