@@ -17,6 +17,8 @@ jobs:
         shell: "bash"
         run: |
           cd FFmpeg
+          ls -la
+          pwd
 
           ./configure --toolchain=msvc \
             --target-os=win64 \
