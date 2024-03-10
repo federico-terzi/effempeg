@@ -23,8 +23,8 @@ jobs:
           export PATH="$(pwd)/vendor:$PATH"
           echo $PATH
           which yasm
-          which cl
-          which link
+          # which cl
+          # which link
 
           cd FFmpeg
           ls -la
