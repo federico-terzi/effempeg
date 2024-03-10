@@ -13,6 +13,7 @@ jobs:
           submodules: 'true'
       - uses: ilammy/msvc-dev-cmd@v1
       - name: Installing dependencies
+        shell: "bash"
         run: |
           pacman -S --noconfirm make
       - name: Build FFmpeg
@@ -53,6 +54,19 @@ jobs:
 
           echo "Installing"
           /usr/bin/make install
+      - name: Package libraries
+        run: |
+          $sha = git rev-parse HEAD
+          $zipName = "${sha}_x86_64-pc-windows-msvc.zip"
+          Compress-Archive -Path "SHARED_LIBS" -DestinationPath $zipName
+
+          # Pass zip name to next step
+          echo "::set-output name=zipName::$zipName"
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: $zipName
+          path: $zipName
       - name: Setup tmate session
         if: ${{ failure() }}
         uses: mxschmitt/action-tmate@v3
