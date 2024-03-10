@@ -13,6 +13,8 @@ jobs:
           submodules: 'true'
       - uses: ilammy/msvc-dev-cmd@v1
       - uses: msys2/setup-msys2@v2
+        with:
+          path-type: 'inherit'
       - name: Installing dependencies
         shell: msys2 {0}
         run: |
@@ -48,7 +50,7 @@ jobs:
             --enable-swresample \
             --enable-swscale
       - name: Build FFmpeg
-        shell: bash
+        shell: msys2 {0}
         run: |
           cd FFmpeg
           ls -la
@@ -75,6 +77,6 @@ jobs:
         with:
           name: $zipName
           path: $zipName
-      - name: Setup tmate session
-        if: ${{ failure() }}
-        uses: mxschmitt/action-tmate@v3
+      # - name: Setup tmate session
+      #   if: ${{ failure() }}
+      #   uses: mxschmitt/action-tmate@v3
