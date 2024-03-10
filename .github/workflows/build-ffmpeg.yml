@@ -12,6 +12,9 @@ jobs:
         with:
           submodules: 'true'
       - uses: ilammy/msvc-dev-cmd@v1
+      - name: Installing dependencies
+        run: |
+          pacman -S --noconfirm make
       - name: Build FFmpeg
         shell: "bash"
         run: |
@@ -46,10 +49,10 @@ jobs:
           rm -Rf /usr/bin/link
 
           echo "Compiling"
-          make -j4
+          /usr/bin/make -j4
 
           echo "Installing"
-          make install
+          /usr/bin/make install
       - name: Setup tmate session
         if: ${{ failure() }}
         uses: mxschmitt/action-tmate@v3
