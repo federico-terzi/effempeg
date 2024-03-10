@@ -17,14 +17,12 @@ jobs:
         shell: msys2 {0}
         run: |
           pacman -S --noconfirm make
-      - name: Build FFmpeg
-        shell: msys2 {0}
+      - name: Configure FFmpeg
+        shell: "bash"
         run: |
           export PATH="$(pwd)/vendor:$PATH"
           echo $PATH
           which yasm
-          # which cl
-          # which link
 
           cd FFmpeg
           ls -la
@@ -48,7 +46,13 @@ jobs:
             --enable-postproc \
             --enable-swresample \
             --enable-swscale
-          
+      - name: Build FFmpeg
+        shell: msys2 {0}
+        run: |
+          cd FFmpeg
+          ls -la
+          pwd
+
           echo "Removing link as it might conflict"
           rm -Rf /usr/bin/link
 
