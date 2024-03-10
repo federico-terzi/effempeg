@@ -1,5 +1,7 @@
+# THIS IS NOT PRODUCTION READY, JUST AN EXPERIMENT
+
 # effempeg
-Experiements with FFmpeg
+Experiements with FFmpeg, forking https://github.com/zmwangx/rust-ffmpeg-sys and https://github.com/zmwangx/rust-ffmpeg
 
 ## Getting started
 
