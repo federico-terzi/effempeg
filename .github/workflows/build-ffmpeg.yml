@@ -17,6 +17,7 @@ jobs:
         shell: msys2 {0}
         run: |
           pacman -S --noconfirm make
+          which make
       - name: Configure FFmpeg
         shell: "bash"
         run: |
@@ -47,7 +48,7 @@ jobs:
             --enable-swresample \
             --enable-swscale
       - name: Build FFmpeg
-        shell: msys2 {0}
+        shell: bash
         run: |
           cd FFmpeg
           ls -la
