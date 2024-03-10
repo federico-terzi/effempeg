@@ -35,6 +35,9 @@ jobs:
             --target-os=win64 \
             --arch=x86_64 \
             --disable-debug \
+            --disable-filters \
+            --disable-encoders \ 
+            --disable-decoders \ 
             --enable-stripping \
             --enable-shared \
             --shlibdir=SHARED_LIBS \
@@ -64,7 +67,7 @@ jobs:
           rm -Rf /usr/bin/link
 
           echo "Compiling"
-          /usr/bin/make -j8
+          /usr/bin/make -j4
 
           echo "Installing"
           /usr/bin/make install
@@ -72,15 +75,21 @@ jobs:
         run: |
           $sha = git rev-parse HEAD
           $zipName = "${sha}_x86_64-pc-windows-msvc.zip"
+          echo "Creating zip $zipName"
           Compress-Archive -Path "FFmpeg/SHARED_LIBS" -DestinationPath $zipName
 
+          ls
+
           # Pass zip name to next step
-          echo "::set-output name=zipName::$zipName"
-      - name: Upload artifact
-        uses: actions/upload-artifact@v2
+          echo "{zipName}={$zipName}" >> $GITHUB_OUTPUT
+      - name: "Publish as release"
+        uses: softprops/action-gh-release@v1
         with:
-          name: $zipName
-          path: $zipName
+          files: $zipName
+          tag_name: ${{ github.sha }}
+          release_name: ${{ github.sha }}
+          draft: false
+          prerelease: false
       # - name: Setup tmate session
       #   if: ${{ failure() }}
       #   uses: mxschmitt/action-tmate@v3
