@@ -52,6 +52,10 @@ jobs:
       - name: Build FFmpeg
         shell: msys2 {0}
         run: |
+          export PATH="$(pwd)/vendor:$PATH"
+          echo $PATH
+          which yasm
+          
           cd FFmpeg
           ls -la
           pwd
