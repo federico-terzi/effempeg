@@ -15,9 +15,9 @@ jobs:
       - name: Build FFmpeg
         shell: "bash"
         run: |
-          export PATH="$(pwd)/vendor:$PATH"
-          echo $PATH
-          which yasm
+          # export PATH="$(pwd)/vendor:$PATH"
+          # echo $PATH
+          # which yasm
 
           cd FFmpeg
           ls -la
@@ -25,6 +25,7 @@ jobs:
 
           ./configure --toolchain=msvc \
             --target-os=win64 \
+            --x86asmexe=../vendor/yasm.exe \
             --arch=x86_64 \
             --disable-debug \
             --enable-stripping \
@@ -50,6 +51,6 @@ jobs:
 
           echo "Installing"
           make install
-      - name: Setup tmate session
-        if: ${{ failure() }}
-        uses: mxschmitt/action-tmate@v3
+      # - name: Setup tmate session
+      #   if: ${{ failure() }}
+      #   uses: mxschmitt/action-tmate@v3
