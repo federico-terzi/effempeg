@@ -85,7 +85,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: "*msvc.zip"
-          tag_name: ${{ github.sha }}
+          tag_name: "test"
           draft: false
           prerelease: false
       # - name: Setup tmate session
