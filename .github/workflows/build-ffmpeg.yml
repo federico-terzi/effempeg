@@ -15,8 +15,7 @@ jobs:
       - name: Installing dependencies
         shell: "bash"
         run: |
-          echo $0
-          pacman -S --noconfirm make
+          /usr/bin/pacman -S --noconfirm make
       - name: Build FFmpeg
         shell: "bash"
         run: |
