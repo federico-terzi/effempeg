@@ -1,6 +1,10 @@
 name: build-ffmpeg
 on:
   push:
+    paths:
+      - effempeg-sys-bindgen/**
+      - configure.py
+      - .github/workflows/build-ffmpeg.yml
   # TODO: add filter so that it only runs on master when something relevant changes
 
 jobs:
