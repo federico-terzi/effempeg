@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+    "effempeg",
     "effempeg-sys",
     "effempeg-sys-bindgen",
 ]

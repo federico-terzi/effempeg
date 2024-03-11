@@ -1,0 +1,27 @@
+[package]
+name    = "effempeg"
+version = "0.6.0"
+edition = "2021"
+
+authors = ["meh. <meh@schizofreni.co>"]
+license = "WTFPL"
+
+[features]
+default = ["standard"]
+
+standard = ["effempeg-sys/standard"]
+
+[dependencies]
+libc      = "0.2"
+bitflags  = "1.0"
+thiserror = "1"
+vsprintf = "2"
+effempeg-sys={path="../effempeg-sys"}
+
+[dependencies.log]
+version = "0.4"
+optional = true
+
+[dev-dependencies]
+env_logger = "0.8"
+serde_json = "1"
