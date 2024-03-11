@@ -64,7 +64,7 @@ jobs:
 
           echo "Installing"
           /usr/bin/make install
-      - name: Package libraries
+      - name: Package shared libs
         run: |
           $configuration = "${{ matrix.configuration }}"
           $zipName = "${configuration}_sharedlibs_x86_64-pc-windows-msvc.zip"
@@ -72,16 +72,38 @@ jobs:
           Compress-Archive -Path "FFmpeg/SHARED_LIBS" -DestinationPath $zipName
 
           ls
+      - name: Package includes libs
+        run: |
+          $configuration = "${{ matrix.configuration }}"
+          $zipName = "${configuration}_includes_x86_64-pc-windows-msvc.zip"
+          echo "Creating zip $zipName"
+          Compress-Archive -Path "FFmpeg/INCLUDES" -DestinationPath $zipName
 
-          # Pass zip name to next step
-          echo "{zipName}={$zipName}" >> $GITHUB_OUTPUT
-      - name: "Publish as release"
+          ls
+      - name: "Publish libs"
         uses: softprops/action-gh-release@v2
         with:
-          files: "*msvc.zip"
+          files: "*.zip"
           tag_name: "build"
           draft: false
           prerelease: false
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Build bindgen bindings
+        run: |
+          cargo run -p effempeg-sys-bindgen
+      - name: Prepare bindings
+        shell: bash
+        run: |
+          # Rename the bindings
+          mv bindings.rs ${{ matrix.configuration }}_bindings_x86_64-pc-windows-msvc.rs
+      - name: "Publish bindings"
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "*.rs"
+          tag_name: "build"
+          draft: false
+          prerelease: false
+
       # - name: Setup tmate session
       #   if: ${{ failure() }}
       #   uses: mxschmitt/action-tmate@v3

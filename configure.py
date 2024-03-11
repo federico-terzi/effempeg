@@ -6,18 +6,19 @@ WINDOWS_ARGS = [
   "--toolchain=msvc",
   "--target-os=win64",
   "--arch=x86_64",
+  "--incdir=INCLUDES",
+  "--shlibdir=SHARED_LIBS",
 ]
 
 STANDARD_ARGS = [
   "--disable-debug",
   "--enable-stripping",
   "--enable-shared",
-  "--shlibdir=SHARED_LIBS",
   "--enable-pic",
   "--disable-autodetect",
   "--disable-programs",
   "--enable-avcodec",
-  "--disable-avdevice",
+  "--enable-avdevice",
   "--enable-avfilter",
   "--enable-avformat",
   "--enable-avutil",
