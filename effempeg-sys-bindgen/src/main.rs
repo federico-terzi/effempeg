@@ -227,13 +227,6 @@ fn main() {
         .header(get_header_path("libavutil/camellia.h"))
         .header(get_header_path("libavutil/cast5.h"))
         .header(get_header_path("libavutil/channel_layout.h"))
-        // Here until https://github.com/rust-lang/rust-bindgen/issues/2192 /
-        // https://github.com/rust-lang/rust-bindgen/issues/258 is fixed.
-        .header(format!(
-            "{}/{}",
-            std::env::var("CARGO_MANIFEST_DIR").unwrap(),
-            "channel_layout_fixed.h"
-        ))
         .header(get_header_path("libavutil/cpu.h"))
         .header(get_header_path("libavutil/crc.h"))
         .header(get_header_path("libavutil/dict.h"))
