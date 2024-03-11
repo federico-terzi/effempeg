@@ -79,11 +79,17 @@ fn download_resources() {
     download_bindings();
 }
 
+// TODO: make macos version
 fn link_libraries() {
     let shared_libs_folder = get_shared_libs_folder();
     for entry in std::fs::read_dir(&shared_libs_folder).unwrap() {
         let entry = entry.unwrap();
         let path = entry.path();
+
+        if !path.extension().unwrap().to_str().unwrap().eq("lib") {
+            continue;
+        }
+
         if path.is_file() {
             println!(
                 "cargo:rustc-link-lib=dylib={}",

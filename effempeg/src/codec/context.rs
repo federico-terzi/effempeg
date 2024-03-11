@@ -2,11 +2,8 @@ use std::{any::Any, ptr, rc::Rc};
 
 use libc::c_int;
 
-#[cfg(feature = "ffmpeg_3_1")]
 use super::Parameters;
-use super::{
-    decoder::Decoder, encoder::Encoder, threading, Compliance, Debug, Flags, Id, Parameters,
-};
+use super::{decoder::Decoder, encoder::Encoder, threading, Compliance, Debug, Flags, Id};
 use crate::{ffi::*, media, Codec, Error, Rational};
 
 pub struct Context {
