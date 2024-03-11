@@ -9,10 +9,17 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
+    strategy:
+      matrix:
+        configuration: ["standard"]
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: 'true'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10' 
+      # TODO: check if configuration is already there
       - uses: ilammy/msvc-dev-cmd@v1
       - uses: msys2/setup-msys2@v2
         with:
@@ -22,6 +29,10 @@ jobs:
         run: |
           pacman -S --noconfirm make
           which make
+      - name: Preparing configuration
+        shell: "bash"
+        run: |
+          python configure.py ${{ matrix.configuration }} 
       - name: Configure FFmpeg
         shell: "bash"
         run: |
@@ -33,24 +44,7 @@ jobs:
           ls -la
           pwd
 
-          ./configure --toolchain=msvc \
-            --target-os=win64 \
-            --arch=x86_64 \
-            --disable-debug \
-            --enable-stripping \
-            --enable-shared \
-            --shlibdir=SHARED_LIBS \
-            --enable-pic \
-            --disable-autodetect \
-            --disable-programs \
-            --enable-avcodec \
-            --disable-avdevice \
-            --enable-avfilter \
-            --enable-avformat \
-            --enable-avutil \
-            --enable-postproc \
-            --enable-swresample \
-            --enable-swscale
+          ../run_configure.sh
       - name: Build FFmpeg
         shell: msys2 {0}
         run: |
@@ -72,8 +66,8 @@ jobs:
           /usr/bin/make install
       - name: Package libraries
         run: |
-          $sha = git rev-parse HEAD
-          $zipName = "${sha}_x86_64-pc-windows-msvc.zip"
+          $configuration = ${{ matrix.configuration }}
+          $zipName = "${configuration}_sharedlibs_x86_64-pc-windows-msvc.zip"
           echo "Creating zip $zipName"
           Compress-Archive -Path "FFmpeg/SHARED_LIBS" -DestinationPath $zipName
 
@@ -85,7 +79,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: "*msvc.zip"
-          tag_name: "test"
+          tag_name: "build"
           draft: false
           prerelease: false
       # - name: Setup tmate session
