@@ -66,7 +66,7 @@ jobs:
           /usr/bin/make install
       - name: Package libraries
         run: |
-          $configuration = ${{ matrix.configuration }}
+          $configuration = "${{ matrix.configuration }}"
           $zipName = "${configuration}_sharedlibs_x86_64-pc-windows-msvc.zip"
           echo "Creating zip $zipName"
           Compress-Archive -Path "FFmpeg/SHARED_LIBS" -DestinationPath $zipName
