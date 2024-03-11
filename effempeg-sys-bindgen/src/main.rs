@@ -102,9 +102,12 @@ fn main() {
         .ctypes_prefix("libc")
         // https://github.com/rust-lang/rust-bindgen/issues/550
         .blocklist_type("max_align_t")
+        // Issue on aligned and packed struct. Related to:
+        // https://github.com/rust-lang/rust-bindgen/issues/1538
+        .opaque_type("__mingw_ldbl_type_t")
+        // these are never part of ffmpeg API
         .blocklist_function("_.*")
-        // Blocklist functions with u128 in signature.
-        // https://github.com/zmwangx/rust-ffmpeg-sys/issues/1
+        // Rust doesn't support long double, and bindgen can't skip it
         // https://github.com/rust-lang/rust-bindgen/issues/1549
         .blocklist_function("acoshl")
         .blocklist_function("acosl")
@@ -187,10 +190,9 @@ fn main() {
         .blocklist_function("y0l")
         .blocklist_function("y1l")
         .blocklist_function("ynl")
-        .opaque_type("__mingw_ldbl_type_t")
-        .default_enum_style(bindgen::EnumVariation::Rust {
-            non_exhaustive: env::var("CARGO_FEATURE_NON_EXHAUSTIVE_ENUMS").is_ok(),
-        })
+        .newtype_enum("AVChannel")
+        .newtype_enum("AVChannelOrder")
+        .rustified_enum(".*")
         .prepend_enum_name(false)
         .derive_eq(true)
         .size_t_is_usize(true)
