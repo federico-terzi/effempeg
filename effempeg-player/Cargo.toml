@@ -1,0 +1,14 @@
+[package]
+name = "effempeg-player"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+effempeg = { path = "../effempeg"}
+wgpu = "0.19.3"
+pollster = "0.3"
+winit = { version = "0.29"}
+image = { version = "0.24", default-features = false, features= ["png", "jpeg"]}
+cpal = "0.15.3"
