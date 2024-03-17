@@ -11,6 +11,7 @@ use std::{
 };
 use wgpu::util::DeviceExt;
 use winit::{
+    dpi::Size,
     event::{Event, WindowEvent},
     event_loop::EventLoop,
     window::Window,
@@ -288,25 +289,53 @@ var<uniform> scene: SceneUniform;
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     // TODO: think this through
-    // let dimensions = textureDimensions(t_diffuse);
-    // let screen_x = ((in.clip_position.x + 1) / 2) * scene.width;
-    // let screen_y = ((in.clip_position.y + 1) / 2) * scene.height;
+    let dim = textureDimensions(t_diffuse);
+    if dim.x > dim.y {
+        // Horizontal
 
-    // let x = in.clip_position.x / scene.width;
-    // let y = in.clip_position.y / scene.height;
+        var logical_offset_x = (scene.vertexes[0].x + 1) / 2;
+        var logical_offset_y = (scene.vertexes[0].y + 1) / 2;
+        var logical_size_x =((scene.vertexes[2].x - scene.vertexes[0].x) / 2);
+        var logical_size_y = (scene.vertexes[2].y - scene.vertexes[0].y) / 2;
+        let actual_size_x = logical_size_x * scene.width;
+        let actual_size_y = logical_size_y * scene.height;
+        let actual_offset_x = logical_offset_x * scene.width;
+        let actual_offset_y = logical_offset_y * scene.height;
+        let ratio = f32(dim.y) / f32(dim.x);
+        let final_size_y = ratio * actual_size_x;
+        let actual_black_offset_y = (actual_size_y - final_size_y)/2;
 
-    let offset_x = (scene.vertexes[0].x + 1) / 2;
-    let offset_y = (scene.vertexes[0].y + 1) / 2;
-    // let offset_y = 0.3;
-    let size_x = (scene.vertexes[2].x - scene.vertexes[0].x) / 2;
-    let size_y = (scene.vertexes[2].y - scene.vertexes[0].y) / 2;
+        let x = (in.clip_position.x - actual_offset_x) / actual_size_x;
+        let y = (in.clip_position.y - actual_offset_y - actual_black_offset_y) / final_size_y;
 
-    let x = (((in.vert_pos.x + 1) / 2) - offset_x) / size_x;
-    let y = -(((in.vert_pos.y + 1) / 2) - offset_y) / size_y;
+        if (y < 0 || y > 1) {
+            return vec4<f32>(0.0, 0.0, 0.0, 1.0);
+        }
 
-    return textureSample(t_diffuse, s_diffuse, vec2<f32>(x, y));
-    // return textureSample(t_diffuse, s_diffuse, vec2<f32>(in.clip_position.x / 1000, in.clip_position.y/1000));
-    //return vec4<f32>(1.0, 0.0, 0.0, 1.0);
+        return textureSample(t_diffuse, s_diffuse, vec2<f32>(x, y));
+    } else {
+        // Vertical
+        var logical_offset_x = (scene.vertexes[0].x + 1) / 2;
+        var logical_offset_y = (scene.vertexes[0].y + 1) / 2;
+        var logical_size_x =((scene.vertexes[2].x - scene.vertexes[0].x) / 2);
+        var logical_size_y = (scene.vertexes[2].y - scene.vertexes[0].y) / 2;
+        let actual_size_x = logical_size_x * scene.width;
+        let actual_size_y = logical_size_y * scene.height;
+        let actual_offset_x = logical_offset_x * scene.width;
+        let actual_offset_y = logical_offset_y * scene.height;
+        let ratio = f32(dim.x) / f32(dim.y);
+        let final_size_x = ratio * actual_size_y;
+        let actual_black_offset_x = (actual_size_x - final_size_x)/2;
+
+        let x = (in.clip_position.x - actual_offset_x - actual_black_offset_x) / final_size_x;
+        let y = (in.clip_position.y - actual_offset_y) / actual_size_y;
+
+        if (x < 0 || x > 1) {
+            return vec4<f32>(0.0, 0.0, 0.0, 1.0);
+        }
+
+        return textureSample(t_diffuse, s_diffuse, vec2<f32>(x, y));
+    }
 }
 ",
         )),
@@ -721,7 +750,12 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
 pub fn main() {
     let event_loop = EventLoop::new().unwrap();
-    let mut builder = winit::window::WindowBuilder::new();
+    let mut builder = winit::window::WindowBuilder::new().with_inner_size(Size::Physical(
+        winit::dpi::PhysicalSize {
+            height: 600,
+            width: 600,
+        },
+    ));
     let window = builder.build(&event_loop).unwrap();
 
     pollster::block_on(run(event_loop, window));
