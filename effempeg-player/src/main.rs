@@ -5,9 +5,11 @@ use cpal::{
 use std::{
     borrow::Cow,
     collections::VecDeque,
+    num::NonZeroU32,
     sync::{Arc, Mutex},
     time::Instant,
 };
+use wgpu::util::DeviceExt;
 use winit::{
     event::{Event, WindowEvent},
     event_loop::EventLoop,
@@ -24,7 +26,42 @@ use effempeg::{
     Rescale,
 };
 
+#[repr(C)]
+#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+struct Vertex {
+    position: [f32; 4],
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+struct Scene {
+    width: f32,
+    height: f32,
+    _padding: [f32; 2],
+    vertexes: [Vertex; 4],
+}
+
 async fn run(event_loop: EventLoop<()>, window: Window) {
+    let mut VERTICES: Vec<Vertex> = vec![
+        Vertex {
+            position: [-0.6, -0.6, 0.0, 0.0],
+        },
+        Vertex {
+            position: [0.6, -0.6, 0.0, 0.0],
+        },
+        Vertex {
+            position: [0.6, 0.6, 0.0, 0.0],
+        },
+        Vertex {
+            position: [-0.6, 0.6, 0.0, 0.0],
+        },
+    ];
+
+    const INDICES: &[u16] = &[
+        0, 1, 2, // first triangle
+        0, 2, 3, // second triangle
+    ];
+
     effempeg::init().unwrap();
 
     let (video_tx, video_receiver) = std::sync::mpsc::sync_channel(10);
@@ -209,25 +246,153 @@ async fn run(event_loop: EventLoop<()>, window: Window) {
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: None,
         source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(
-            r"@vertex
-fn vs_main(@builtin(vertex_index) in_vertex_index: u32) -> @builtin(position) vec4<f32> {
-    let x = f32(i32(in_vertex_index) - 1);
-    let y = f32(i32(in_vertex_index & 1u) * 2 - 1);
-    return vec4<f32>(x, y, 0.0, 1.0);
+            r"
+// Vertex shader
+
+struct VertexInput {
+    @location(0) position: vec4<f32>,
+};
+
+struct VertexOutput {
+    @builtin(position) clip_position: vec4<f32>,
+    @location(0) vert_pos: vec3<f32>,
+};
+            
+@vertex
+fn vs_main(
+    model: VertexInput,
+) -> VertexOutput {
+    var out: VertexOutput;
+    out.clip_position = model.position;
+    out.clip_position.a  = 1.0;
+    out.vert_pos = out.clip_position.xyz;
+    return out;
 }
+
+// Fragment shader
 
 @group(0) @binding(0)
 var t_diffuse: texture_2d<f32>;
 @group(0) @binding(1)
 var s_diffuse: sampler;
 
+struct SceneUniform {
+    width: f32,
+    height: f32,
+    vertexes: array<vec4<f32>, 4>,
+};
+@group(1) @binding(0)
+var<uniform> scene: SceneUniform;
+
+
 @fragment
-fn fs_main(@builtin(position) in: vec4<f32>) -> @location(0) vec4<f32> {
-    return textureSample(t_diffuse, s_diffuse, vec2<f32>(in.x/1000, in.y/1000));
+fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
+    // TODO: think this through
+    // let dimensions = textureDimensions(t_diffuse);
+    // let screen_x = ((in.clip_position.x + 1) / 2) * scene.width;
+    // let screen_y = ((in.clip_position.y + 1) / 2) * scene.height;
+
+    // let x = in.clip_position.x / scene.width;
+    // let y = in.clip_position.y / scene.height;
+
+    let offset_x = (scene.vertexes[0].x + 1) / 2;
+    let offset_y = (scene.vertexes[0].y + 1) / 2;
+    // let offset_y = 0.3;
+    let size_x = (scene.vertexes[2].x - scene.vertexes[0].x) / 2;
+    let size_y = (scene.vertexes[2].y - scene.vertexes[0].y) / 2;
+
+    let x = (((in.vert_pos.x + 1) / 2) - offset_x) / size_x;
+    let y = -(((in.vert_pos.y + 1) / 2) - offset_y) / size_y;
+
+    return textureSample(t_diffuse, s_diffuse, vec2<f32>(x, y));
+    // return textureSample(t_diffuse, s_diffuse, vec2<f32>(in.clip_position.x / 1000, in.clip_position.y/1000));
     //return vec4<f32>(1.0, 0.0, 0.0, 1.0);
 }
 ",
         )),
+    });
+
+    let mut scene: Scene = Scene {
+        width: 100.0,
+        height: 100.0,
+        _padding: [0.0, 0.0],
+        vertexes: VERTICES[0..4].try_into().unwrap(),
+    };
+
+    let scene_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Scene Buffer"),
+        contents: bytemuck::cast_slice(&[scene]),
+        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+    });
+
+    let scene_bind_group_layout =
+        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+            label: Some("scene_bind_group_layout"),
+        });
+
+    let scene_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        layout: &scene_bind_group_layout,
+        entries: &[wgpu::BindGroupEntry {
+            binding: 0,
+            resource: scene_buffer.as_entire_binding(),
+        }],
+        label: Some("scene_bind_group"),
+    });
+
+    let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Vertex Buffer"),
+        contents: bytemuck::cast_slice(&VERTICES),
+        usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+    });
+
+    let vertex_buffer_layout = wgpu::VertexBufferLayout {
+        array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
+        step_mode: wgpu::VertexStepMode::Vertex,
+        attributes: &[wgpu::VertexAttribute {
+            offset: 0,
+            shader_location: 0,
+            format: wgpu::VertexFormat::Float32x4,
+        }],
+    };
+
+    // let vertex_bind_group_layout =
+    //     device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+    //         entries: &[wgpu::BindGroupLayoutEntry {
+    //             binding: 0,
+    //             visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+    //             ty: wgpu::BindingType::Buffer {
+    //                 ty: wgpu::BufferBindingType::Uniform,
+    //                 has_dynamic_offset: false,
+    //                 min_binding_size: None,
+    //             },
+    //             count: None,
+    //         }],
+    //         label: Some("vertex_bind_group_layout"),
+    //     });
+
+    // let vertex_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+    //     layout: &scene_bind_group_layout,
+    //     entries: &[wgpu::BindGroupEntry {
+    //         binding: 0,
+    //         resource: vertex_buffer.as_entire_binding(),
+    //     }],
+    //     label: Some("vertex_bind_group"),
+    // });
+
+    let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Index Buffer"),
+        contents: bytemuck::cast_slice(INDICES),
+        usage: wgpu::BufferUsages::INDEX,
     });
 
     let mut config = surface
@@ -347,7 +512,7 @@ fn fs_main(@builtin(position) in: vec4<f32>) -> @location(0) vec4<f32> {
 
     let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: None,
-        bind_group_layouts: &[&texture_bind_group_layout],
+        bind_group_layouts: &[&texture_bind_group_layout, &scene_bind_group_layout],
         push_constant_ranges: &[],
     });
 
@@ -360,7 +525,7 @@ fn fs_main(@builtin(position) in: vec4<f32>) -> @location(0) vec4<f32> {
         vertex: wgpu::VertexState {
             module: &shader,
             entry_point: "vs_main",
-            buffers: &[],
+            buffers: &[vertex_buffer_layout],
         },
         fragment: Some(wgpu::FragmentState {
             module: &shader,
@@ -448,6 +613,17 @@ fn fs_main(@builtin(position) in: vec4<f32>) -> @location(0) vec4<f32> {
                             window.request_redraw();
                         }
                         WindowEvent::RedrawRequested => {
+                            let inner_size = window.inner_size();
+                            scene = Scene {
+                                width: inner_size.width as f32,
+                                height: inner_size.height as f32,
+                                _padding: [0.0, 0.0],
+                                vertexes: VERTICES[0..4].try_into().unwrap(),
+                            };
+                            queue.write_buffer(&scene_buffer, 0, bytemuck::cast_slice(&[scene]));
+                            // println!("scene {:?}", scene);
+                            // VERTICES[0].position[0] += 0.01;
+                            // queue.write_buffer(&vertex_buffer, 0, bytemuck::cast_slice(&VERTICES));
                             let frame: Video =
                                 if let Some(last_video_frame) = last_video_frame.take() {
                                     last_video_frame
@@ -517,8 +693,14 @@ fn fs_main(@builtin(position) in: vec4<f32>) -> @location(0) vec4<f32> {
                                         occlusion_query_set: None,
                                     });
                                 rpass.set_pipeline(&render_pipeline);
+                                rpass.set_vertex_buffer(0, vertex_buffer.slice(..));
+                                rpass.set_index_buffer(
+                                    index_buffer.slice(..),
+                                    wgpu::IndexFormat::Uint16,
+                                );
                                 rpass.set_bind_group(0, &diffuse_bind_group, &[]);
-                                rpass.draw(0..3, 0..1);
+                                rpass.set_bind_group(1, &scene_bind_group, &[]);
+                                rpass.draw_indexed(0..(INDICES.len() as u32), 0, 0..1);
                             }
 
                             queue.submit(Some(encoder.finish()));
