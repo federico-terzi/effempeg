@@ -171,7 +171,7 @@ jobs:
       - name: Package shared libs
         run: |
           configuration="${{ matrix.configuration }}"
-          zipName="${configuration}_sharedlibs_${{ steps.rustarchconvert.rustarch }}-apple-darwin.zip"
+          zipName="${configuration}_sharedlibs_${{ steps.rustarchconvert.outputs.rustarch }}-apple-darwin.zip"
           echo "Creating zip $zipName"
           zip -r $zipName "FFmpeg/SHARED_LIBS"
 
@@ -179,7 +179,7 @@ jobs:
       - name: Package includes libs
         run: |
           configuration="${{ matrix.configuration }}"
-          zipName="${configuration}_includes_${{ steps.rustarchconvert.rustarch }}-apple-darwin.zip"
+          zipName="${configuration}_includes_${{ steps.rustarchconvert.outputs.rustarch }}-apple-darwin.zip"
           echo "Creating zip $zipName"
           zip -r $zipName "FFmpeg/INCLUDES"
 
@@ -198,7 +198,7 @@ jobs:
       - name: Prepare bindings
         run: |
           # Rename the bindings
-          mv bindings.rs ${{ matrix.configuration }}_bindings_${{ steps.rustarchconvert.rustarch }}-apple-darwin.rs
+          mv bindings.rs ${{ matrix.configuration }}_bindings_${{ steps.rustarchconvert.outputs.rustarch }}-apple-darwin.rs
       - name: "Publish bindings"
         uses: softprops/action-gh-release@v2
         with:
