@@ -135,6 +135,7 @@ jobs:
         run: |
           python configure.py ${{ matrix.configuration }} ${{matrix.arch}}
           chmod +x run_configure.sh
+          uname -m
       - name: Configure FFmpeg
         shell: "bash"
         run: |
