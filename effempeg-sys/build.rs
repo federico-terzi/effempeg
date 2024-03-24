@@ -79,7 +79,41 @@ fn download_resources() {
     download_bindings();
 }
 
-// TODO: make macos version
+#[cfg(target_os = "macos")]
+fn link_libraries() {
+    let shared_libs_folder = get_shared_libs_folder().join("SHARED_LIBS");
+    for entry in std::fs::read_dir(&shared_libs_folder).unwrap() {
+        let entry = entry.unwrap();
+        let path = entry.path();
+
+        // On macOS, we generate multiple instances of dinamic libraries (not sure why)
+        // This line allows us to link only to the main one.
+        if path
+            .file_name()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .chars()
+            .any(char::is_numeric)
+        {
+            continue;
+        }
+
+        let mut libname = path.file_stem().unwrap().to_str().unwrap();
+        if libname.starts_with("lib") {
+            libname = &libname[3..];
+        }
+        // println!("cargo:warning={:?}", libname);
+
+        println!("cargo:rustc-link-lib=dylib={}", libname);
+        println!(
+            "cargo:rustc-link-search=native={}",
+            shared_libs_folder.display()
+        );
+    }
+}
+
+#[cfg(target_os = "windows")]
 fn link_libraries() {
     let shared_libs_folder = get_shared_libs_folder();
     for entry in std::fs::read_dir(&shared_libs_folder).unwrap() {

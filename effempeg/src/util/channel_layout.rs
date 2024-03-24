@@ -49,10 +49,10 @@ pub enum Channel {
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 #[repr(i32)]
 pub enum ChannelOrder {
-    Unspecified = AVChannelOrder::AV_CHANNEL_ORDER_UNSPEC.0,
-    Native = AVChannelOrder::AV_CHANNEL_ORDER_NATIVE.0,
-    Custom = AVChannelOrder::AV_CHANNEL_ORDER_CUSTOM.0,
-    Ambisonic = AVChannelOrder::AV_CHANNEL_ORDER_AMBISONIC.0,
+    Unspecified = AVChannelOrder::AV_CHANNEL_ORDER_UNSPEC.0 as i32,
+    Native = AVChannelOrder::AV_CHANNEL_ORDER_NATIVE.0 as i32,
+    Custom = AVChannelOrder::AV_CHANNEL_ORDER_CUSTOM.0 as i32,
+    Ambisonic = AVChannelOrder::AV_CHANNEL_ORDER_AMBISONIC.0 as i32,
 }
 
 #[derive(Copy, Clone)]
@@ -297,7 +297,7 @@ impl ChannelLayout {
     }
 
     pub fn set_order(&mut self, order: ChannelOrder) {
-        self.0.order = AVChannelOrder(order as i32);
+        self.0.order = AVChannelOrder((order as i32).try_into().unwrap());
     }
 
     pub fn channels(&self) -> i32 {
