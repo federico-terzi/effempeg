@@ -17,7 +17,6 @@ MACOS_ARGS = [
   "--target-os=darwin",
   "--incdir=INCLUDES",
   "--shlibdir=SHARED_LIBS",
-  "--enable-cross-compile",
 ]
 
 MACOS_X86_64_ARGS = [
@@ -26,6 +25,11 @@ MACOS_X86_64_ARGS = [
 
 MACOS_ARM_ARGS = [
   "--arch=arm64",
+  "--enable-cross-compile",
+  "--extra-cflags=-arch",
+  "--extra-cflags=arm64",
+  "--extra-ldflags=-arch",
+  "--extra-ldflags=arm64",
 ]
 
 STANDARD_ARGS = [
