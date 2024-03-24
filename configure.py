@@ -5,9 +5,26 @@ import sys
 WINDOWS_ARGS = [
   "--toolchain=msvc",
   "--target-os=win64",
-  "--arch=x86_64",
   "--incdir=INCLUDES",
   "--shlibdir=SHARED_LIBS",
+]
+
+WINDOWS_X86_64_ARGS = [
+  "--arch=x86_64",
+]
+
+MACOS_ARGS = [
+  "--target-os=darwin",
+  "--incdir=INCLUDES",
+  "--shlibdir=SHARED_LIBS",
+]
+
+MACOS_X86_64_ARGS = [
+  "--arch=x86_64",
+]
+
+MACOS_ARM_ARGS = [
+  "--arch=arm64",
 ]
 
 STANDARD_ARGS = [
@@ -32,15 +49,32 @@ CONFIGURATIONS = {
 }
 
 def build():
-  if len(sys.argv) != 2:
-    raise ValueError("Invalid number of arguments, expected 1: configuration")
+  if len(sys.argv) != 3:
+    raise ValueError("Invalid number of arguments, expected 2: configuration arch")
+
+  arch = sys.argv[2]
 
   args = []
 
   # If windows, prepend windows args
   if platform.system() == "Windows":
+    print("Windows detected")
     args += WINDOWS_ARGS
-  
+    if arch == "x86_64":
+      args += WINDOWS_X86_64_ARGS
+    else:
+      raise ValueError(f"Invalid arch: {arch}")
+
+  elif platform.system() == "Darwin":
+    print("MacOS detected")
+    args += MACOS_ARGS
+    if arch == "x86_64":
+      args += MACOS_X86_64_ARGS
+    elif arch == "arm64":
+      args += MACOS_ARM_ARGS
+    else:
+      raise ValueError(f"Invalid arch: {arch}")
+
   configuration = sys.argv[1]
   if configuration not in CONFIGURATIONS:
     raise ValueError(f"Invalid configuration: {configuration}")
