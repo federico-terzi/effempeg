@@ -125,6 +125,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.10' 
+      - name: Set up Homebrew
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@185247228b4c622139b94e77b9b92e977dc8e074
+      - name: Install FFmpeg dependencies
+        run: |
+          brew install nasm
       - name: Preparing configuration
         run: |
           python configure.py ${{ matrix.configuration }} ${{matrix.arch}}
