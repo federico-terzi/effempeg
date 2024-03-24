@@ -128,6 +128,7 @@ jobs:
       - name: Preparing configuration
         run: |
           python configure.py ${{ matrix.configuration }} ${{matrix.arch}}
+          chmod +x run_configure.sh
       - name: Configure FFmpeg
         shell: "bash"
         run: |
