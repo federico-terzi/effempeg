@@ -170,18 +170,18 @@ jobs:
           fi
       - name: Package shared libs
         run: |
-          $configuration = "${{ matrix.configuration }}"
-          $zipName = "${configuration}_sharedlibs_${{ steps.rustarchconvert.rustarch }}-apple-darwin.zip"
+          configuration="${{ matrix.configuration }}"
+          zipName="${configuration}_sharedlibs_${{ steps.rustarchconvert.rustarch }}-apple-darwin.zip"
           echo "Creating zip $zipName"
-          Compress-Archive -Path "FFmpeg/SHARED_LIBS" -DestinationPath $zipName
+          zip -r $zipName "FFmpeg/SHARED_LIBS"
 
           ls
       - name: Package includes libs
         run: |
-          $configuration = "${{ matrix.configuration }}"
-          $zipName = "${configuration}_includes_${{ steps.rustarchconvert.rustarch }}-apple-darwin.zip"
+          configuration="${{ matrix.configuration }}"
+          zipName="${configuration}_includes_${{ steps.rustarchconvert.rustarch }}-apple-darwin.zip"
           echo "Creating zip $zipName"
-          Compress-Archive -Path "FFmpeg/INCLUDES" -DestinationPath $zipName
+          zip -r $zipName "FFmpeg/INCLUDES"
 
           ls
       - name: "Publish libs"
@@ -196,7 +196,6 @@ jobs:
         run: |
           cargo run -p effempeg-sys-bindgen
       - name: Prepare bindings
-        shell: bash
         run: |
           # Rename the bindings
           mv bindings.rs ${{ matrix.configuration }}_bindings_${{ steps.rustarchconvert.rustarch }}-apple-darwin.rs
