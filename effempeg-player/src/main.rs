@@ -1,12 +1,14 @@
 use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
-    Sample, SampleFormat, SampleRate,
+    FromSample, Sample, SampleFormat, SampleRate,
 };
 use std::{
     borrow::Cow,
     collections::VecDeque,
+    fs::File,
+    io::BufWriter,
     num::NonZeroU32,
-    sync::{Arc, Mutex},
+    sync::{mpsc::TrySendError, Arc, Mutex},
     time::Instant,
 };
 use wgpu::util::DeviceExt;
@@ -24,7 +26,7 @@ use effempeg::{
     rescale,
     software::scaling::{context::Context, flag::Flags},
     util::frame::video::Video,
-    Rescale,
+    ChannelLayout, Rescale,
 };
 
 #[repr(C)]
@@ -65,7 +67,7 @@ async fn run(event_loop: EventLoop<()>, window: Window) {
 
     effempeg::init().unwrap();
 
-    let (video_tx, video_receiver) = std::sync::mpsc::sync_channel(10);
+    let (video_tx, video_receiver) = std::sync::mpsc::sync_channel(5);
     let (audio_tx, audio_receiver) = std::sync::mpsc::sync_channel(50);
 
     let mut ictx = input(std::env::args().nth(1).expect("Cannot open file.")).unwrap();
@@ -88,8 +90,11 @@ async fn run(event_loop: EventLoop<()>, window: Window) {
     let video_timebase = video_decoder.time_base().unwrap();
     println!("video timebase {:?}", video_decoder.time_base());
     let mut audio_decoder = audio_input.decoder().unwrap().audio().unwrap();
+    let audio_decoder_sample_rate = audio_decoder.sample_rate();
+    let audio_timebase = audio_decoder.time_base().unwrap();
 
     println!("audio format: {:?}", audio_decoder.format());
+    println!("audio channels: {:?}", audio_decoder.channel_layout());
 
     let audio_host = cpal::default_host();
     let audio_device = audio_host
@@ -106,6 +111,10 @@ async fn run(event_loop: EventLoop<()>, window: Window) {
         }
     }
     println!("decoder sample rate: {}", audio_decoder.sample_rate());
+    println!(
+        "sample size: {}",
+        audio_config.unwrap().sample_format().sample_size()
+    );
     let audio_config = audio_config.unwrap().with_max_sample_rate();
     // .with_sample_rate(SampleRate(audio_decoder.sample_rate()));
     let format = audio_config.sample_format();
@@ -124,6 +133,8 @@ async fn run(event_loop: EventLoop<()>, window: Window) {
     let height = video_decoder.height();
     // let width = 1920;
     // let height = 1080;
+    // let width = 640;
+    // let height = 480;
 
     std::thread::spawn(move || {
         let mut scaler = Context::get(
@@ -133,6 +144,7 @@ async fn run(event_loop: EventLoop<()>, window: Window) {
             Pixel::RGBA,
             width,
             height,
+            // Flags::POINT,
             Flags::POINT,
         )
         .unwrap();
@@ -141,11 +153,23 @@ async fn run(event_loop: EventLoop<()>, window: Window) {
             audio_decoder.format(),
             audio_decoder.channel_layout(),
             audio_decoder.sample_rate(),
-            effempeg::format::Sample::F32(effempeg::format::sample::Type::Planar),
-            audio_decoder.channel_layout(),
+            effempeg::format::Sample::F32(effempeg::format::sample::Type::Packed),
+            // effempeg::format::Sample::F32(effempeg::format::sample::Type::Planar),
+            // audio_decoder.channel_layout(),
+            ChannelLayout::default(2),
+            // audio_decoder.sample_rate(),
             sample_rate,
         )
         .unwrap();
+        println!(
+            "previous sample rate: {} current sample rate: {}",
+            audio_decoder.sample_rate(),
+            sample_rate
+        );
+        let ratio = sample_rate as f64 / audio_decoder_sample_rate as f64;
+
+        println!("ratio: {}", ratio);
+
         // let mut scaler = Context::get(
         //     decoder.format(),
         //     decoder.width(),
@@ -163,11 +187,21 @@ async fn run(event_loop: EventLoop<()>, window: Window) {
                 while decoder.receive_frame(&mut decoded).is_ok() {
                     // println!("frame {:?}", decoded.timestamp());
                     // println!("frame2 {:?}", decoded.pts());
+                    // video_tx.send(decoded.clone()).unwrap();
+
                     let mut rgb_frame = Video::empty();
                     scaler.run(&decoded, &mut rgb_frame)?;
                     rgb_frame.set_pts(decoded.pts());
                     video_tx.send(rgb_frame).unwrap();
-                    // video_tx.send(decoded.clone()).unwrap();
+                    // match video_tx.try_send(rgb_frame) {
+                    //     Ok(_) => {}
+                    //     Err(TrySendError::Full(_)) => {
+                    //         println!("video channel full, skipping frame!");
+                    //     }
+                    //     _ => {
+                    //         panic!("send error!");
+                    //     }
+                    // }
                 }
                 Ok(())
             };
@@ -177,10 +211,75 @@ async fn run(event_loop: EventLoop<()>, window: Window) {
                 let mut decoded = effempeg::frame::Audio::empty();
                 while decoder.receive_frame(&mut decoded).is_ok() {
                     // audio_tx.send(decoded.clone()).unwrap();
+
+                    // TODO: investigate why the audio stutters?
+
                     let mut resampled = effempeg::frame::Audio::empty();
-                    resampler.run(&decoded, &mut resampled)?;
-                    // println!("audio frame {:?}", decoded.timestamp());
+                    // let sample_number = (decoded.samples() as f64 * ratio) as usize;
+                    // let mut resampled = effempeg::frame::Audio::new(
+                    //     resampler.output().format,
+                    //     sample_number,
+                    //     resampler.output().channel_layout,
+                    // );
+                    let result = resampler.run(&decoded, &mut resampled)?;
+                    resampled.set_pts(decoded.pts());
+                    assert!(resampled.is_packed(), "resampled is not packed");
+                    // println!("resampled pts: {:?}", resampled.pts());
+                    // println!("resampled planes2: {}", resampled.planes());
+
+                    // println!(
+                    //     "result: {:?}, samples: {}, previous size: {} current size {}, current samples: {}",
+                    //     result,
+                    //     decoded.samples(),
+                    //     decoded.data(0).len(),
+                    //     resampled.data(0).len(),
+                    //     resampled.samples(),
+                    // );
                     audio_tx.send(resampled).unwrap();
+
+                    if result.is_some() {
+                        loop {
+                            let mut resampled = effempeg::frame::Audio::empty();
+                            resampled.alloc(
+                                resampler.output().format,
+                                decoded.samples(),
+                                resampler.output().channel_layout,
+                            );
+                            assert!(!resampled.is_empty(), "resampled is empty");
+                            let result = resampler.flush(&mut resampled).unwrap();
+
+                            // TODO: this is very likely incorrect!
+                            if let Some(delay) = result {
+                                resampled.set_pts(Some(decoded.pts().unwrap() + delay.output));
+                            }
+                            // println!("resampled2 pts: {:?}", resampled.pts());
+                            // println!("resampled planes: {}", resampled.planes());
+                            if resampled.planes() == 0 {
+                                // println!("break planes!");
+                                break;
+                            }
+                            if resampled.samples() <= 0 {
+                                // println!("break samples!");
+                                break;
+                            }
+
+                            audio_tx.send(resampled).unwrap();
+                            if result.is_none() {
+                                // println!("break result!");
+                                break;
+                            }
+                        }
+                    }
+                    // if result.is_some() {
+                    //     let result = resampler.flush(&mut resampled).unwrap();
+                    //     audio_tx.send(resampled).unwrap();
+                    //     if result.is_none() {
+                    //         break;
+                    //     }
+                    // }
+                    // println!("result {:?}", result);
+
+                    // println!("audio frame {:?}", decoded.timestamp());
                 }
                 Ok(())
             };
@@ -494,8 +593,10 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         address_mode_v: wgpu::AddressMode::Repeat,
         address_mode_w: wgpu::AddressMode::Repeat,
         mag_filter: wgpu::FilterMode::Linear,
-        min_filter: wgpu::FilterMode::Nearest,
-        mipmap_filter: wgpu::FilterMode::Nearest,
+        // min_filter: wgpu::FilterMode::Nearest,
+        // mipmap_filter: wgpu::FilterMode::Nearest,
+        min_filter: wgpu::FilterMode::Linear,
+        mipmap_filter: wgpu::FilterMode::Linear,
         ..Default::default()
     });
 
@@ -575,42 +676,112 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     std::thread::spawn(move || loop {
         event_loop_proxy.send_event(()).unwrap();
 
+        // std::thread::sleep(std::time::Duration::from_millis(8));
         std::thread::sleep(std::time::Duration::from_millis(16));
+        // std::thread::sleep(std::time::Duration::from_millis(32));
     });
 
+    let mut last_instant = Instant::now();
+
     let mut sample_data: VecDeque<f32> = VecDeque::new();
+    let mut output_data: Vec<f32> = Vec::new();
 
     let stream = audio_device
         .build_output_stream(
             &audio_config,
             move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
                 // println!(
-                //     "data len: {}, frame len: {}",
+                //     "data len {}, sample_data buffer {}",
                 //     data.len(),
-                //     frame_data_f32.len()
+                //     sample_data.len()
                 // );
+                // for sample in data.iter_mut() {
+                //     *sample = 0.0;
+                // }
+                // for chunk in data.chunks_mut(2) {
+                //     let data_sample = if let Some(sample) = sample_data.pop_front() {
+                //         sample
+                //     } else {
+                //         let frame = audio_receiver.recv().unwrap();
+                //         let frame_data = frame.data(0);
+                //         let frame_data_f32: &[f32] = unsafe {
+                //             std::slice::from_raw_parts(
+                //                 frame_data.as_ptr() as *const f32,
+                //                 frame_data.len() / std::mem::size_of::<f32>(),
+                //             )
+                //         };
 
-                for chunk in data.chunks_mut(2) {
+                //         println!("frame len: {}", frame_data_f32.len());
+
+                //         sample_data.extend(frame_data_f32.iter());
+                //         sample_data.pop_front().unwrap()
+                //     };
+
+                //     for sample in chunk {
+                //         *sample = data_sample;
+                //     }
+                // }
+                for out_sample in data.iter_mut() {
                     let data_sample = if let Some(sample) = sample_data.pop_front() {
                         sample
                     } else {
                         let frame = audio_receiver.recv().unwrap();
+
+                        // let frame_timestamp_millis =
+                        //     frame.pts().unwrap() / (audio_timebase.1 as i64 / 1000);
+                        // // println!("frame {:?} {:?}", frame.pts(), frame_timestamp_millis);
+                        // let actual_time_millis = last_instant.elapsed().as_millis() as i64;
+                        // println!(
+                        //     "delta audio: {}",
+                        //     frame_timestamp_millis - actual_time_millis
+                        // );
+
+                        // println!("output frame planes {}", frame.planes());
                         let frame_data = frame.data(0);
                         let frame_data_f32: &[f32] = unsafe {
                             std::slice::from_raw_parts(
                                 frame_data.as_ptr() as *const f32,
-                                frame_data.len() / std::mem::size_of::<f32>(),
+                                frame.samples() * frame.channels() as usize,
                             )
                         };
+
+                        // println!("frame len: {}", frame_data_f32.len());
 
                         sample_data.extend(frame_data_f32.iter());
                         sample_data.pop_front().unwrap()
                     };
 
-                    for sample in chunk {
-                        *sample = data_sample;
-                    }
+                    // if data_sample > 1.0 || data_sample < -1.0 {
+                    //     println!("detected outlier!");
+                    // }
+                    // // Clip data sample to -0.5/0.5 range
+                    // let data_sample = data_sample.max(-0.5).min(0.5);
+
+                    *out_sample = data_sample;
+                    output_data.push(data_sample);
                 }
+
+                // if output_data.len() > 200000 {
+                //     let value = serde_json::Value::Array(
+                //         output_data
+                //             .iter()
+                //             .map(|item| {
+                //                 serde_json::Value::Number(
+                //                     serde_json::Number::from_f64(*item as f64).unwrap_or_else(
+                //                         || {
+                //                             eprintln!("error converting to f64: {}", *item);
+                //                             return serde_json::Number::from_f64(-1000000.0)
+                //                                 .unwrap();
+                //                         },
+                //                     ),
+                //                 )
+                //             })
+                //             .collect(),
+                //     );
+
+                //     std::fs::write("output.json", serde_json::to_string(&value).unwrap()).unwrap();
+                //     panic!("done!");
+                // }
             },
             move |err| {
                 eprintln!("an error occurred on stream: {}", err);
@@ -620,7 +791,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         .unwrap();
     stream.play().unwrap();
 
-    let mut last_video_instant = Instant::now();
     let mut last_video_frame = None;
 
     event_loop
@@ -653,23 +823,37 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                             // println!("scene {:?}", scene);
                             // VERTICES[0].position[0] += 0.01;
                             // queue.write_buffer(&vertex_buffer, 0, bytemuck::cast_slice(&VERTICES));
-                            let frame: Video =
-                                if let Some(last_video_frame) = last_video_frame.take() {
-                                    last_video_frame
-                                } else {
-                                    video_receiver.recv().unwrap()
-                                };
-                            let frame_timestamp_millis =
-                                frame.pts().unwrap() / (video_timebase.1 as i64 / 1000);
-                            // println!("frame {:?} {:?}", frame.pts(), frame_timestamp_millis);
-                            let actual_time_millis =
-                                last_video_instant.elapsed().as_millis() as i64;
 
-                            if frame_timestamp_millis > actual_time_millis {
-                                // println!("skipping frame");
-                                last_video_frame = Some(frame);
-                                return;
-                            }
+                            let frame = loop {
+                                let frame: Video =
+                                    if let Some(last_video_frame) = last_video_frame.take() {
+                                        last_video_frame
+                                    } else {
+                                        video_receiver.recv().unwrap()
+                                    };
+                                let frame_timestamp_millis = frame.pts().unwrap() as f64
+                                    / (video_timebase.1 as f64 / 1000.0);
+                                let frame_timestamp_millis = frame_timestamp_millis as i64;
+                                // println!("frame {:?} {:?}", frame.pts(), frame_timestamp_millis);
+                                let actual_time_millis = last_instant.elapsed().as_millis() as i64;
+
+                                // println!(
+                                //     "delta video: {}",
+                                //     frame_timestamp_millis - actual_time_millis
+                                // );
+
+                                if frame_timestamp_millis > actual_time_millis {
+                                    // println!("delaying frame");
+                                    last_video_frame = Some(frame);
+                                    return;
+                                } else if frame_timestamp_millis < actual_time_millis - 16 {
+                                    println!("skipping frame");
+                                    last_video_frame = None;
+                                    continue;
+                                }
+
+                                break frame;
+                            };
 
                             let bytes = frame.data(0);
 
