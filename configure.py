@@ -17,6 +17,7 @@ MACOS_ARGS = [
   "--target-os=darwin",
   "--incdir=INCLUDES",
   "--shlibdir=SHARED_LIBS",
+  "--enable-hwaccel=videotoolbox",
 ]
 
 MACOS_X86_64_ARGS = [
