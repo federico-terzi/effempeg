@@ -109,14 +109,15 @@ jobs:
           draft: false
           prerelease: false
 
-  build-macos-arm:
-    name: Build FFMpeg MacOS (ARM)
-    runs-on: macos-13-xlarge
+  build-macos:
+    name: Build FFMpeg MacOS
+    runs-on: macos-latest
     permissions:
       contents: write
     strategy:
       matrix:
         configuration: ["standard"]
+        arch: ["x86_64", "arm64"]
     steps:
       - uses: actions/checkout@v2
         with:
@@ -132,7 +133,7 @@ jobs:
           brew install nasm
       - name: Preparing configuration
         run: |
-          python configure.py ${{ matrix.configuration }} arm64
+          python configure.py ${{ matrix.configuration }} ${{matrix.arch}}
           chmod +x run_configure.sh
           uname -m
       - name: Configure FFmpeg
@@ -154,10 +155,23 @@ jobs:
 
           echo "Installing"
           /usr/bin/make install
+      - name: Convert Arch to Rust format
+        id: rustarchconvert
+        run: |
+          if [ "${{ matrix.arch }}" == "x86_64" ]; then
+            echo "x86_64"
+            echo "rustarch=x86_64" >> $GITHUB_OUTPUT
+          elif [ "${{ matrix.arch }}" == "arm64" ]; then
+            echo "aarch64"
+            echo "rustarch=aarch64" >> $GITHUB_OUTPUT
+          else
+            echo "Unknown arch"
+            exit 1
+          fi
       - name: Package shared libs
         run: |
           configuration="${{ matrix.configuration }}"
-          zipName="${configuration}_sharedlibs_aarch64-apple-darwin.zip"
+          zipName="${configuration}_sharedlibs_${{ steps.rustarchconvert.outputs.rustarch }}-apple-darwin.zip"
           echo "Creating zip $zipName"
           zip -r $zipName "FFmpeg/SHARED_LIBS"
 
@@ -165,7 +179,7 @@ jobs:
       - name: Package includes libs
         run: |
           configuration="${{ matrix.configuration }}"
-          zipName="${configuration}_includes_aarch64-apple-darwin.zip"
+          zipName="${configuration}_includes_${{ steps.rustarchconvert.outputs.rustarch }}-apple-darwin.zip"
           echo "Creating zip $zipName"
           zip -r $zipName "FFmpeg/INCLUDES"
 
@@ -184,95 +198,7 @@ jobs:
       - name: Prepare bindings
         run: |
           # Rename the bindings
-          mv bindings.rs ${{ matrix.configuration }}_bindings_aarch64-apple-darwin.rs
-      - name: "Publish bindings"
-        uses: softprops/action-gh-release@v2
-        with:
-          files: "*.rs"
-          tag_name: "build"
-          draft: false
-          prerelease: false
-
-      # - name: Setup tmate session
-      #   if: ${{ failure() }}
-      #   uses: mxschmitt/action-tmate@v3
-
-  build-macos-x86_64:
-    name: Build FFMpeg MacOS (x86_64)
-    runs-on: macos-13
-    permissions:
-      contents: write
-    strategy:
-      matrix:
-        configuration: ["standard"]
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          submodules: 'true'
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.10' 
-      - name: Set up Homebrew
-        id: set-up-homebrew
-        uses: Homebrew/actions/setup-homebrew@185247228b4c622139b94e77b9b92e977dc8e074
-      - name: Install FFmpeg dependencies
-        run: |
-          brew install nasm
-      - name: Preparing configuration
-        run: |
-          python configure.py ${{ matrix.configuration }} x86_64
-          chmod +x run_configure.sh
-          uname -m
-      - name: Configure FFmpeg
-        shell: "bash"
-        run: |
-          cd FFmpeg
-          ls -la
-          pwd
-
-          ../run_configure.sh
-      - name: Build FFmpeg
-        run: |
-          cd FFmpeg
-          ls -la
-          pwd
-
-          echo "Compiling"
-          /usr/bin/make -j4
-
-          echo "Installing"
-          /usr/bin/make install
-      - name: Package shared libs
-        run: |
-          configuration="${{ matrix.configuration }}"
-          zipName="${configuration}_sharedlibs_x86_64-apple-darwin.zip"
-          echo "Creating zip $zipName"
-          zip -r $zipName "FFmpeg/SHARED_LIBS"
-
-          ls
-      - name: Package includes libs
-        run: |
-          configuration="${{ matrix.configuration }}"
-          zipName="${configuration}_includes_x86_64-apple-darwin.zip"
-          echo "Creating zip $zipName"
-          zip -r $zipName "FFmpeg/INCLUDES"
-
-          ls
-      - name: "Publish libs"
-        uses: softprops/action-gh-release@v2
-        with:
-          files: "*.zip"
-          tag_name: "build"
-          draft: false
-          prerelease: false
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - name: Build bindgen bindings
-        run: |
-          cargo run -p effempeg-sys-bindgen
-      - name: Prepare bindings
-        run: |
-          # Rename the bindings
-          mv bindings.rs ${{ matrix.configuration }}_bindings_x86_64-apple-darwin.rs
+          mv bindings.rs ${{ matrix.configuration }}_bindings_${{ steps.rustarchconvert.outputs.rustarch }}-apple-darwin.rs
       - name: "Publish bindings"
         uses: softprops/action-gh-release@v2
         with:
