@@ -7,6 +7,7 @@ WINDOWS_ARGS = [
   "--target-os=win64",
   "--incdir=INCLUDES",
   "--shlibdir=SHARED_LIBS",
+  "--enable-mediafoundation",
 ]
 
 WINDOWS_X86_64_ARGS = [
