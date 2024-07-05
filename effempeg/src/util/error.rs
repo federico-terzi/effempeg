@@ -1,11 +1,11 @@
 use std::{
-	error,
-	ffi::CStr,
-	fmt,
-	hash::{Hash, Hasher},
-	io,
-	os::raw::c_char,
-	str::from_utf8_unchecked,
+    error,
+    ffi::CStr,
+    fmt,
+    hash::{Hash, Hasher},
+    io,
+    os::raw::c_char,
+    str::from_utf8_unchecked,
 };
 
 use libc::c_int;
@@ -13,363 +13,374 @@ use libc::c_int;
 use crate::ffi::*;
 
 pub enum Error {
-	Io(io::Error),
-	Bug,
-	Bug2,
-	Unknown,
-	Experimental,
-	BufferTooSmall,
-	Eof,
-	Exit,
-	External,
-	InvalidData,
-	PatchWelcome,
+    Io(io::Error),
+    Bug,
+    Bug2,
+    Unknown,
+    Experimental,
+    BufferTooSmall,
+    Eof,
+    Exit,
+    External,
+    InvalidData,
+    PatchWelcome,
 
-	InputChanged,
-	OutputChanged,
+    InputChanged,
+    OutputChanged,
 
-	BsfNotFound,
-	DecoderNotFound,
-	DemuxerNotFound,
-	EncoderNotFound,
-	OptionNotFound,
-	MuxerNotFound,
-	FilterNotFound,
-	ProtocolNotFound,
-	StreamNotFound,
+    BsfNotFound,
+    DecoderNotFound,
+    DemuxerNotFound,
+    EncoderNotFound,
+    OptionNotFound,
+    MuxerNotFound,
+    FilterNotFound,
+    ProtocolNotFound,
+    StreamNotFound,
 
-	HttpBadRequest,
-	HttpUnauthorized,
-	HttpForbidden,
-	HttpNotFound,
-	HttpOther4xx,
-	HttpServerError,
+    HttpBadRequest,
+    HttpUnauthorized,
+    HttpForbidden,
+    HttpNotFound,
+    HttpOther4xx,
+    HttpServerError,
 }
 
 impl From<c_int> for Error {
-	fn from(value: c_int) -> Error {
-		match value {
-			AVERROR_BSF_NOT_FOUND => Error::BsfNotFound,
-			AVERROR_BUG => Error::Bug,
-			AVERROR_BUFFER_TOO_SMALL => Error::BufferTooSmall,
-			AVERROR_DECODER_NOT_FOUND => Error::DecoderNotFound,
-			AVERROR_DEMUXER_NOT_FOUND => Error::DemuxerNotFound,
-			AVERROR_ENCODER_NOT_FOUND => Error::EncoderNotFound,
-			AVERROR_EOF => Error::Eof,
-			AVERROR_EXIT => Error::Exit,
-			AVERROR_EXTERNAL => Error::External,
-			AVERROR_FILTER_NOT_FOUND => Error::FilterNotFound,
-			AVERROR_INVALIDDATA => Error::InvalidData,
-			AVERROR_MUXER_NOT_FOUND => Error::MuxerNotFound,
-			AVERROR_OPTION_NOT_FOUND => Error::OptionNotFound,
-			AVERROR_PATCHWELCOME => Error::PatchWelcome,
-			AVERROR_PROTOCOL_NOT_FOUND => Error::ProtocolNotFound,
-			AVERROR_STREAM_NOT_FOUND => Error::StreamNotFound,
-			AVERROR_BUG2 => Error::Bug2,
-			AVERROR_UNKNOWN => Error::Unknown,
-			AVERROR_EXPERIMENTAL => Error::Experimental,
-			AVERROR_INPUT_CHANGED => Error::InputChanged,
-			AVERROR_OUTPUT_CHANGED => Error::OutputChanged,
-			AVERROR_HTTP_BAD_REQUEST => Error::HttpBadRequest,
-			AVERROR_HTTP_UNAUTHORIZED => Error::HttpUnauthorized,
-			AVERROR_HTTP_FORBIDDEN => Error::HttpForbidden,
-			AVERROR_HTTP_NOT_FOUND => Error::HttpNotFound,
-			AVERROR_HTTP_OTHER_4XX => Error::HttpOther4xx,
-			AVERROR_HTTP_SERVER_ERROR => Error::HttpServerError,
-			err => Error::Io(io::Error::from_raw_os_error(-err)),
-		}
-	}
+    fn from(value: c_int) -> Error {
+        match value {
+            AVERROR_BSF_NOT_FOUND => Error::BsfNotFound,
+            AVERROR_BUG => Error::Bug,
+            AVERROR_BUFFER_TOO_SMALL => Error::BufferTooSmall,
+            AVERROR_DECODER_NOT_FOUND => Error::DecoderNotFound,
+            AVERROR_DEMUXER_NOT_FOUND => Error::DemuxerNotFound,
+            AVERROR_ENCODER_NOT_FOUND => Error::EncoderNotFound,
+            AVERROR_EOF => Error::Eof,
+            AVERROR_EXIT => Error::Exit,
+            AVERROR_EXTERNAL => Error::External,
+            AVERROR_FILTER_NOT_FOUND => Error::FilterNotFound,
+            AVERROR_INVALIDDATA => Error::InvalidData,
+            AVERROR_MUXER_NOT_FOUND => Error::MuxerNotFound,
+            AVERROR_OPTION_NOT_FOUND => Error::OptionNotFound,
+            AVERROR_PATCHWELCOME => Error::PatchWelcome,
+            AVERROR_PROTOCOL_NOT_FOUND => Error::ProtocolNotFound,
+            AVERROR_STREAM_NOT_FOUND => Error::StreamNotFound,
+            AVERROR_BUG2 => Error::Bug2,
+            AVERROR_UNKNOWN => Error::Unknown,
+            AVERROR_EXPERIMENTAL => Error::Experimental,
+            AVERROR_INPUT_CHANGED => Error::InputChanged,
+            AVERROR_OUTPUT_CHANGED => Error::OutputChanged,
+            AVERROR_HTTP_BAD_REQUEST => Error::HttpBadRequest,
+            AVERROR_HTTP_UNAUTHORIZED => Error::HttpUnauthorized,
+            AVERROR_HTTP_FORBIDDEN => Error::HttpForbidden,
+            AVERROR_HTTP_NOT_FOUND => Error::HttpNotFound,
+            AVERROR_HTTP_OTHER_4XX => Error::HttpOther4xx,
+            AVERROR_HTTP_SERVER_ERROR => Error::HttpServerError,
+            err => Error::Io(io::Error::from_raw_os_error(-err)),
+        }
+    }
 }
 
 impl Into<c_int> for Error {
-	fn into(self) -> c_int {
-		self.as_raw_error()
-	}
+    fn into(self) -> c_int {
+        self.as_raw_error()
+    }
 }
 
 impl From<Error> for io::Error {
-	fn from(value: Error) -> io::Error {
-		match value {
-			Error::Io(err) => err,
+    fn from(value: Error) -> io::Error {
+        match value {
+            Error::Io(err) => err,
 
-			value => io::Error::new(io::ErrorKind::Other, value),
-		}
-	}
+            value => io::Error::new(io::ErrorKind::Other, value),
+        }
+    }
 }
 
 impl fmt::Display for Error {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-		match self {
-			Error::Io(err) => err.fmt(f),
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        let description = match self {
+            Error::Io(io) => format!("{:?}", io),
+            Error::Bug => "Bug".to_string(),
+            Error::Bug2 => "Bug2".to_string(),
+            Error::Unknown => "Unknown".to_string(),
+            Error::Experimental => "Experimental".to_string(),
+            Error::BufferTooSmall => "BufferTooSmall".to_string(),
+            Error::Eof => "Eof".to_string(),
+            Error::Exit => "Exit".to_string(),
+            Error::External => "External".to_string(),
+            Error::InvalidData => "InvalidData".to_string(),
+            Error::PatchWelcome => "PatchWelcome".to_string(),
+            Error::InputChanged => "InputChanged".to_string(),
+            Error::OutputChanged => "OutputChanged".to_string(),
+            Error::BsfNotFound => "BsfNotFound".to_string(),
+            Error::DecoderNotFound => "DecoderNotFound".to_string(),
+            Error::DemuxerNotFound => "DemuxerNotFound".to_string(),
+            Error::EncoderNotFound => "EncoderNotFound".to_string(),
+            Error::OptionNotFound => "OptionNotFound".to_string(),
+            Error::MuxerNotFound => "MuxerNotFound".to_string(),
+            Error::FilterNotFound => "FilterNotFound".to_string(),
+            Error::ProtocolNotFound => "ProtocolNotFound".to_string(),
+            Error::StreamNotFound => "StreamNotFound".to_string(),
+            Error::HttpBadRequest => "HttpBadRequest".to_string(),
+            Error::HttpUnauthorized => "HttpUnauthorized".to_string(),
+            Error::HttpForbidden => "HttpForbidden".to_string(),
+            Error::HttpNotFound => "HttpNotFound".to_string(),
+            Error::HttpOther4xx => "HttpOther4xx".to_string(),
+            Error::HttpServerError => "HttpServerError".to_string(),
+        };
 
-			err => f.write_str(unsafe { from_utf8_unchecked(CStr::from_ptr(STRINGS[index(err)].as_ptr()).to_bytes()) }),
-		}
-	}
+        f.write_str(&format!(
+            "EffempegError({}:{})",
+            description,
+            self.as_raw_error()
+        ))?;
+
+        Ok(())
+    }
 }
 
 impl fmt::Debug for Error {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-		f.write_str("ffmpeg::Error(")?;
-
-		let error_code = AVUNERROR(self.as_raw_error());
-
-		let maybe_err_tag = {
-			let mut bytes = error_code.to_ne_bytes();
-			for b in &mut bytes {
-				if *b == 0xF8 {
-					*b = b' ';
-				}
-			}
-
-			bytes.iter().all(u8::is_ascii_alphabetic).then_some(bytes)
-		};
-
-		if let Some(err_tag) = maybe_err_tag {
-			let s = String::from_utf8_lossy(&err_tag);
-			write!(f, "{s}: ")?;
-		}
-		else {
-			write!(f, "{}: ", error_code)?;
-		}
-
-		fmt::Display::fmt(self, f)?;
-		f.write_str(")")
-	}
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        fmt::Display::fmt(self, f)?;
+        Ok(())
+    }
 }
 
 impl Error {
-	pub fn as_raw_error(&self) -> c_int {
-		match self {
-			Error::Io(err) => err.raw_os_error().unwrap(),
-			Error::BsfNotFound => AVERROR_BSF_NOT_FOUND,
-			Error::Bug => AVERROR_BUG,
-			Error::BufferTooSmall => AVERROR_BUFFER_TOO_SMALL,
-			Error::DecoderNotFound => AVERROR_DECODER_NOT_FOUND,
-			Error::DemuxerNotFound => AVERROR_DEMUXER_NOT_FOUND,
-			Error::EncoderNotFound => AVERROR_ENCODER_NOT_FOUND,
-			Error::Eof => AVERROR_EOF,
-			Error::Exit => AVERROR_EXIT,
-			Error::External => AVERROR_EXTERNAL,
-			Error::FilterNotFound => AVERROR_FILTER_NOT_FOUND,
-			Error::InvalidData => AVERROR_INVALIDDATA,
-			Error::MuxerNotFound => AVERROR_MUXER_NOT_FOUND,
-			Error::OptionNotFound => AVERROR_OPTION_NOT_FOUND,
-			Error::PatchWelcome => AVERROR_PATCHWELCOME,
-			Error::ProtocolNotFound => AVERROR_PROTOCOL_NOT_FOUND,
-			Error::StreamNotFound => AVERROR_STREAM_NOT_FOUND,
-			Error::Bug2 => AVERROR_BUG2,
-			Error::Unknown => AVERROR_UNKNOWN,
-			Error::Experimental => AVERROR_EXPERIMENTAL,
-			Error::InputChanged => AVERROR_INPUT_CHANGED,
-			Error::OutputChanged => AVERROR_OUTPUT_CHANGED,
-			Error::HttpBadRequest => AVERROR_HTTP_BAD_REQUEST,
-			Error::HttpUnauthorized => AVERROR_HTTP_UNAUTHORIZED,
-			Error::HttpForbidden => AVERROR_HTTP_FORBIDDEN,
-			Error::HttpNotFound => AVERROR_HTTP_NOT_FOUND,
-			Error::HttpOther4xx => AVERROR_HTTP_OTHER_4XX,
-			Error::HttpServerError => AVERROR_HTTP_SERVER_ERROR,
-		}
-	}
+    pub fn as_raw_error(&self) -> c_int {
+        match self {
+            Error::Io(err) => err.raw_os_error().unwrap(),
+            Error::BsfNotFound => AVERROR_BSF_NOT_FOUND,
+            Error::Bug => AVERROR_BUG,
+            Error::BufferTooSmall => AVERROR_BUFFER_TOO_SMALL,
+            Error::DecoderNotFound => AVERROR_DECODER_NOT_FOUND,
+            Error::DemuxerNotFound => AVERROR_DEMUXER_NOT_FOUND,
+            Error::EncoderNotFound => AVERROR_ENCODER_NOT_FOUND,
+            Error::Eof => AVERROR_EOF,
+            Error::Exit => AVERROR_EXIT,
+            Error::External => AVERROR_EXTERNAL,
+            Error::FilterNotFound => AVERROR_FILTER_NOT_FOUND,
+            Error::InvalidData => AVERROR_INVALIDDATA,
+            Error::MuxerNotFound => AVERROR_MUXER_NOT_FOUND,
+            Error::OptionNotFound => AVERROR_OPTION_NOT_FOUND,
+            Error::PatchWelcome => AVERROR_PATCHWELCOME,
+            Error::ProtocolNotFound => AVERROR_PROTOCOL_NOT_FOUND,
+            Error::StreamNotFound => AVERROR_STREAM_NOT_FOUND,
+            Error::Bug2 => AVERROR_BUG2,
+            Error::Unknown => AVERROR_UNKNOWN,
+            Error::Experimental => AVERROR_EXPERIMENTAL,
+            Error::InputChanged => AVERROR_INPUT_CHANGED,
+            Error::OutputChanged => AVERROR_OUTPUT_CHANGED,
+            Error::HttpBadRequest => AVERROR_HTTP_BAD_REQUEST,
+            Error::HttpUnauthorized => AVERROR_HTTP_UNAUTHORIZED,
+            Error::HttpForbidden => AVERROR_HTTP_FORBIDDEN,
+            Error::HttpNotFound => AVERROR_HTTP_NOT_FOUND,
+            Error::HttpOther4xx => AVERROR_HTTP_OTHER_4XX,
+            Error::HttpServerError => AVERROR_HTTP_SERVER_ERROR,
+        }
+    }
 }
 
 #[inline(always)]
 fn index(error: &Error) -> usize {
-	match error {
-		Error::Io(_) => unreachable!(),
-		Error::BsfNotFound => 0,
-		Error::Bug => 1,
-		Error::BufferTooSmall => 2,
-		Error::DecoderNotFound => 3,
-		Error::DemuxerNotFound => 4,
-		Error::EncoderNotFound => 5,
-		Error::Eof => 6,
-		Error::Exit => 7,
-		Error::External => 8,
-		Error::FilterNotFound => 9,
-		Error::InvalidData => 10,
-		Error::MuxerNotFound => 11,
-		Error::OptionNotFound => 12,
-		Error::PatchWelcome => 13,
-		Error::ProtocolNotFound => 14,
-		Error::StreamNotFound => 15,
-		Error::Bug2 => 16,
-		Error::Unknown => 17,
-		Error::Experimental => 18,
-		Error::InputChanged => 19,
-		Error::OutputChanged => 20,
-		Error::HttpBadRequest => 21,
-		Error::HttpUnauthorized => 22,
-		Error::HttpForbidden => 23,
-		Error::HttpNotFound => 24,
-		Error::HttpOther4xx => 25,
-		Error::HttpServerError => 26,
-	}
+    match error {
+        Error::Io(_) => unreachable!(),
+        Error::BsfNotFound => 0,
+        Error::Bug => 1,
+        Error::BufferTooSmall => 2,
+        Error::DecoderNotFound => 3,
+        Error::DemuxerNotFound => 4,
+        Error::EncoderNotFound => 5,
+        Error::Eof => 6,
+        Error::Exit => 7,
+        Error::External => 8,
+        Error::FilterNotFound => 9,
+        Error::InvalidData => 10,
+        Error::MuxerNotFound => 11,
+        Error::OptionNotFound => 12,
+        Error::PatchWelcome => 13,
+        Error::ProtocolNotFound => 14,
+        Error::StreamNotFound => 15,
+        Error::Bug2 => 16,
+        Error::Unknown => 17,
+        Error::Experimental => 18,
+        Error::InputChanged => 19,
+        Error::OutputChanged => 20,
+        Error::HttpBadRequest => 21,
+        Error::HttpUnauthorized => 22,
+        Error::HttpForbidden => 23,
+        Error::HttpNotFound => 24,
+        Error::HttpOther4xx => 25,
+        Error::HttpServerError => 26,
+    }
 }
 
 // XXX: the length has to be synced with the number of errors
-static mut STRINGS: [[c_char; AV_ERROR_MAX_STRING_SIZE as usize]; 27] = [[0; AV_ERROR_MAX_STRING_SIZE as usize]; 27];
+static mut STRINGS: [[c_char; AV_ERROR_MAX_STRING_SIZE as usize]; 27] =
+    [[0; AV_ERROR_MAX_STRING_SIZE as usize]; 27];
 
 pub fn register_all() {
-	unsafe {
-		av_strerror(
-			Error::Bug.into(),
-			STRINGS[index(&Error::Bug)].as_mut_ptr(),
-			AV_ERROR_MAX_STRING_SIZE,
-		);
-		av_strerror(
-			Error::Bug2.into(),
-			STRINGS[index(&Error::Bug2)].as_mut_ptr(),
-			AV_ERROR_MAX_STRING_SIZE,
-		);
-		av_strerror(
-			Error::Unknown.into(),
-			STRINGS[index(&Error::Unknown)].as_mut_ptr(),
-			AV_ERROR_MAX_STRING_SIZE,
-		);
-		av_strerror(
-			Error::Experimental.into(),
-			STRINGS[index(&Error::Experimental)].as_mut_ptr(),
-			AV_ERROR_MAX_STRING_SIZE,
-		);
-		av_strerror(
-			Error::BufferTooSmall.into(),
-			STRINGS[index(&Error::BufferTooSmall)].as_mut_ptr(),
-			AV_ERROR_MAX_STRING_SIZE,
-		);
-		av_strerror(
-			Error::Eof.into(),
-			STRINGS[index(&Error::Eof)].as_mut_ptr(),
-			AV_ERROR_MAX_STRING_SIZE,
-		);
-		av_strerror(
-			Error::Exit.into(),
-			STRINGS[index(&Error::Exit)].as_mut_ptr(),
-			AV_ERROR_MAX_STRING_SIZE,
-		);
-		av_strerror(
-			Error::External.into(),
-			STRINGS[index(&Error::External)].as_mut_ptr(),
-			AV_ERROR_MAX_STRING_SIZE,
-		);
-		av_strerror(
-			Error::InvalidData.into(),
-			STRINGS[index(&Error::InvalidData)].as_mut_ptr(),
-			AV_ERROR_MAX_STRING_SIZE,
-		);
-		av_strerror(
-			Error::PatchWelcome.into(),
-			STRINGS[index(&Error::PatchWelcome)].as_mut_ptr(),
-			AV_ERROR_MAX_STRING_SIZE,
-		);
+    unsafe {
+        av_strerror(
+            Error::Bug.into(),
+            STRINGS[index(&Error::Bug)].as_mut_ptr(),
+            AV_ERROR_MAX_STRING_SIZE,
+        );
+        av_strerror(
+            Error::Bug2.into(),
+            STRINGS[index(&Error::Bug2)].as_mut_ptr(),
+            AV_ERROR_MAX_STRING_SIZE,
+        );
+        av_strerror(
+            Error::Unknown.into(),
+            STRINGS[index(&Error::Unknown)].as_mut_ptr(),
+            AV_ERROR_MAX_STRING_SIZE,
+        );
+        av_strerror(
+            Error::Experimental.into(),
+            STRINGS[index(&Error::Experimental)].as_mut_ptr(),
+            AV_ERROR_MAX_STRING_SIZE,
+        );
+        av_strerror(
+            Error::BufferTooSmall.into(),
+            STRINGS[index(&Error::BufferTooSmall)].as_mut_ptr(),
+            AV_ERROR_MAX_STRING_SIZE,
+        );
+        av_strerror(
+            Error::Eof.into(),
+            STRINGS[index(&Error::Eof)].as_mut_ptr(),
+            AV_ERROR_MAX_STRING_SIZE,
+        );
+        av_strerror(
+            Error::Exit.into(),
+            STRINGS[index(&Error::Exit)].as_mut_ptr(),
+            AV_ERROR_MAX_STRING_SIZE,
+        );
+        av_strerror(
+            Error::External.into(),
+            STRINGS[index(&Error::External)].as_mut_ptr(),
+            AV_ERROR_MAX_STRING_SIZE,
+        );
+        av_strerror(
+            Error::InvalidData.into(),
+            STRINGS[index(&Error::InvalidData)].as_mut_ptr(),
+            AV_ERROR_MAX_STRING_SIZE,
+        );
+        av_strerror(
+            Error::PatchWelcome.into(),
+            STRINGS[index(&Error::PatchWelcome)].as_mut_ptr(),
+            AV_ERROR_MAX_STRING_SIZE,
+        );
 
-		av_strerror(
-			Error::InputChanged.into(),
-			STRINGS[index(&Error::InputChanged)].as_mut_ptr(),
-			AV_ERROR_MAX_STRING_SIZE,
-		);
-		av_strerror(
-			Error::OutputChanged.into(),
-			STRINGS[index(&Error::OutputChanged)].as_mut_ptr(),
-			AV_ERROR_MAX_STRING_SIZE,
-		);
+        av_strerror(
+            Error::InputChanged.into(),
+            STRINGS[index(&Error::InputChanged)].as_mut_ptr(),
+            AV_ERROR_MAX_STRING_SIZE,
+        );
+        av_strerror(
+            Error::OutputChanged.into(),
+            STRINGS[index(&Error::OutputChanged)].as_mut_ptr(),
+            AV_ERROR_MAX_STRING_SIZE,
+        );
 
-		av_strerror(
-			Error::BsfNotFound.into(),
-			STRINGS[index(&Error::BsfNotFound)].as_mut_ptr(),
-			AV_ERROR_MAX_STRING_SIZE,
-		);
-		av_strerror(
-			Error::DecoderNotFound.into(),
-			STRINGS[index(&Error::DecoderNotFound)].as_mut_ptr(),
-			AV_ERROR_MAX_STRING_SIZE,
-		);
-		av_strerror(
-			Error::DemuxerNotFound.into(),
-			STRINGS[index(&Error::DemuxerNotFound)].as_mut_ptr(),
-			AV_ERROR_MAX_STRING_SIZE,
-		);
-		av_strerror(
-			Error::EncoderNotFound.into(),
-			STRINGS[index(&Error::EncoderNotFound)].as_mut_ptr(),
-			AV_ERROR_MAX_STRING_SIZE,
-		);
-		av_strerror(
-			Error::OptionNotFound.into(),
-			STRINGS[index(&Error::OptionNotFound)].as_mut_ptr(),
-			AV_ERROR_MAX_STRING_SIZE,
-		);
-		av_strerror(
-			Error::MuxerNotFound.into(),
-			STRINGS[index(&Error::MuxerNotFound)].as_mut_ptr(),
-			AV_ERROR_MAX_STRING_SIZE,
-		);
-		av_strerror(
-			Error::FilterNotFound.into(),
-			STRINGS[index(&Error::FilterNotFound)].as_mut_ptr(),
-			AV_ERROR_MAX_STRING_SIZE,
-		);
-		av_strerror(
-			Error::ProtocolNotFound.into(),
-			STRINGS[index(&Error::ProtocolNotFound)].as_mut_ptr(),
-			AV_ERROR_MAX_STRING_SIZE,
-		);
-		av_strerror(
-			Error::StreamNotFound.into(),
-			STRINGS[index(&Error::StreamNotFound)].as_mut_ptr(),
-			AV_ERROR_MAX_STRING_SIZE,
-		);
+        av_strerror(
+            Error::BsfNotFound.into(),
+            STRINGS[index(&Error::BsfNotFound)].as_mut_ptr(),
+            AV_ERROR_MAX_STRING_SIZE,
+        );
+        av_strerror(
+            Error::DecoderNotFound.into(),
+            STRINGS[index(&Error::DecoderNotFound)].as_mut_ptr(),
+            AV_ERROR_MAX_STRING_SIZE,
+        );
+        av_strerror(
+            Error::DemuxerNotFound.into(),
+            STRINGS[index(&Error::DemuxerNotFound)].as_mut_ptr(),
+            AV_ERROR_MAX_STRING_SIZE,
+        );
+        av_strerror(
+            Error::EncoderNotFound.into(),
+            STRINGS[index(&Error::EncoderNotFound)].as_mut_ptr(),
+            AV_ERROR_MAX_STRING_SIZE,
+        );
+        av_strerror(
+            Error::OptionNotFound.into(),
+            STRINGS[index(&Error::OptionNotFound)].as_mut_ptr(),
+            AV_ERROR_MAX_STRING_SIZE,
+        );
+        av_strerror(
+            Error::MuxerNotFound.into(),
+            STRINGS[index(&Error::MuxerNotFound)].as_mut_ptr(),
+            AV_ERROR_MAX_STRING_SIZE,
+        );
+        av_strerror(
+            Error::FilterNotFound.into(),
+            STRINGS[index(&Error::FilterNotFound)].as_mut_ptr(),
+            AV_ERROR_MAX_STRING_SIZE,
+        );
+        av_strerror(
+            Error::ProtocolNotFound.into(),
+            STRINGS[index(&Error::ProtocolNotFound)].as_mut_ptr(),
+            AV_ERROR_MAX_STRING_SIZE,
+        );
+        av_strerror(
+            Error::StreamNotFound.into(),
+            STRINGS[index(&Error::StreamNotFound)].as_mut_ptr(),
+            AV_ERROR_MAX_STRING_SIZE,
+        );
 
-		av_strerror(
-			Error::HttpBadRequest.into(),
-			STRINGS[index(&Error::HttpBadRequest)].as_mut_ptr(),
-			AV_ERROR_MAX_STRING_SIZE,
-		);
-		av_strerror(
-			Error::HttpUnauthorized.into(),
-			STRINGS[index(&Error::HttpUnauthorized)].as_mut_ptr(),
-			AV_ERROR_MAX_STRING_SIZE,
-		);
-		av_strerror(
-			Error::HttpForbidden.into(),
-			STRINGS[index(&Error::HttpForbidden)].as_mut_ptr(),
-			AV_ERROR_MAX_STRING_SIZE,
-		);
-		av_strerror(
-			Error::HttpNotFound.into(),
-			STRINGS[index(&Error::HttpNotFound)].as_mut_ptr(),
-			AV_ERROR_MAX_STRING_SIZE,
-		);
-		av_strerror(
-			Error::HttpOther4xx.into(),
-			STRINGS[index(&Error::HttpOther4xx)].as_mut_ptr(),
-			AV_ERROR_MAX_STRING_SIZE,
-		);
-		av_strerror(
-			Error::HttpServerError.into(),
-			STRINGS[index(&Error::HttpServerError)].as_mut_ptr(),
-			AV_ERROR_MAX_STRING_SIZE,
-		);
-	}
+        av_strerror(
+            Error::HttpBadRequest.into(),
+            STRINGS[index(&Error::HttpBadRequest)].as_mut_ptr(),
+            AV_ERROR_MAX_STRING_SIZE,
+        );
+        av_strerror(
+            Error::HttpUnauthorized.into(),
+            STRINGS[index(&Error::HttpUnauthorized)].as_mut_ptr(),
+            AV_ERROR_MAX_STRING_SIZE,
+        );
+        av_strerror(
+            Error::HttpForbidden.into(),
+            STRINGS[index(&Error::HttpForbidden)].as_mut_ptr(),
+            AV_ERROR_MAX_STRING_SIZE,
+        );
+        av_strerror(
+            Error::HttpNotFound.into(),
+            STRINGS[index(&Error::HttpNotFound)].as_mut_ptr(),
+            AV_ERROR_MAX_STRING_SIZE,
+        );
+        av_strerror(
+            Error::HttpOther4xx.into(),
+            STRINGS[index(&Error::HttpOther4xx)].as_mut_ptr(),
+            AV_ERROR_MAX_STRING_SIZE,
+        );
+        av_strerror(
+            Error::HttpServerError.into(),
+            STRINGS[index(&Error::HttpServerError)].as_mut_ptr(),
+            AV_ERROR_MAX_STRING_SIZE,
+        );
+    }
 }
 
 impl error::Error for Error {}
 
 impl Clone for Error {
-	fn clone(&self) -> Error {
-		self.as_raw_error().into()
-	}
+    fn clone(&self) -> Error {
+        self.as_raw_error().into()
+    }
 }
 
 impl PartialEq for Error {
-	fn eq(&self, other: &Self) -> bool {
-		self.as_raw_error() == other.as_raw_error()
-	}
+    fn eq(&self, other: &Self) -> bool {
+        self.as_raw_error() == other.as_raw_error()
+    }
 }
 
 impl Eq for Error {}
 
 impl Hash for Error {
-	fn hash<H: Hasher>(&self, state: &mut H) {
-		self.as_raw_error().hash(state);
-	}
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.as_raw_error().hash(state);
+    }
 }
