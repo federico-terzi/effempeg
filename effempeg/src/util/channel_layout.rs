@@ -321,8 +321,11 @@ impl ChannelLayout {
     }
 
     pub fn custom_channels(&self) -> Option<&[CustomChannel]> {
-        (self.0.order == AVChannelOrder::AV_CHANNEL_ORDER_CUSTOM)
-            .then_some(unsafe { self.custom_channels_unchecked() })
+        // I'm commenting this out as sometimes it causes segfaults, and afaik I don't need custom channels
+        // (self.0.order == AVChannelOrder::AV_CHANNEL_ORDER_CUSTOM)
+        //     .then_some(unsafe { self.custom_channels_unchecked() })
+
+        None
     }
 }
 
