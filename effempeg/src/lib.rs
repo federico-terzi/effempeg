@@ -59,7 +59,7 @@ pub use crate::filter::Filter;
 pub mod software;
 
 fn init_util() {
-    util::error::register_all();
+    // util::error::register_all();
     #[cfg(feature = "log")]
     util::log::register();
 }

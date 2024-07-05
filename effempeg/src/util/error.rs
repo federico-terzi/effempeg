@@ -25,6 +25,8 @@ pub enum Error {
     InvalidData,
     PatchWelcome,
 
+    Again,
+
     InputChanged,
     OutputChanged,
 
@@ -49,6 +51,7 @@ pub enum Error {
 impl From<c_int> for Error {
     fn from(value: c_int) -> Error {
         match value {
+            AVERROR_EAGAIN => Error::Again,
             AVERROR_BSF_NOT_FOUND => Error::BsfNotFound,
             AVERROR_BUG => Error::Bug,
             AVERROR_BUFFER_TOO_SMALL => Error::BufferTooSmall,
@@ -76,6 +79,7 @@ impl From<c_int> for Error {
             AVERROR_HTTP_NOT_FOUND => Error::HttpNotFound,
             AVERROR_HTTP_OTHER_4XX => Error::HttpOther4xx,
             AVERROR_HTTP_SERVER_ERROR => Error::HttpServerError,
+
             err => Error::Io(io::Error::from_raw_os_error(-err)),
         }
     }
@@ -101,6 +105,7 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         let description = match self {
             Error::Io(io) => format!("{:?}", io),
+            Error::Again => "Again".to_string(),
             Error::Bug => "Bug".to_string(),
             Error::Bug2 => "Bug2".to_string(),
             Error::Unknown => "Unknown".to_string(),
@@ -151,6 +156,7 @@ impl Error {
     pub fn as_raw_error(&self) -> c_int {
         match self {
             Error::Io(err) => err.raw_os_error().unwrap(),
+            Error::Again => AVERROR_EAGAIN,
             Error::BsfNotFound => AVERROR_BSF_NOT_FOUND,
             Error::Bug => AVERROR_BUG,
             Error::BufferTooSmall => AVERROR_BUFFER_TOO_SMALL,
@@ -182,186 +188,9 @@ impl Error {
     }
 }
 
-#[inline(always)]
-fn index(error: &Error) -> usize {
-    match error {
-        Error::Io(_) => unreachable!(),
-        Error::BsfNotFound => 0,
-        Error::Bug => 1,
-        Error::BufferTooSmall => 2,
-        Error::DecoderNotFound => 3,
-        Error::DemuxerNotFound => 4,
-        Error::EncoderNotFound => 5,
-        Error::Eof => 6,
-        Error::Exit => 7,
-        Error::External => 8,
-        Error::FilterNotFound => 9,
-        Error::InvalidData => 10,
-        Error::MuxerNotFound => 11,
-        Error::OptionNotFound => 12,
-        Error::PatchWelcome => 13,
-        Error::ProtocolNotFound => 14,
-        Error::StreamNotFound => 15,
-        Error::Bug2 => 16,
-        Error::Unknown => 17,
-        Error::Experimental => 18,
-        Error::InputChanged => 19,
-        Error::OutputChanged => 20,
-        Error::HttpBadRequest => 21,
-        Error::HttpUnauthorized => 22,
-        Error::HttpForbidden => 23,
-        Error::HttpNotFound => 24,
-        Error::HttpOther4xx => 25,
-        Error::HttpServerError => 26,
-    }
-}
-
 // XXX: the length has to be synced with the number of errors
 static mut STRINGS: [[c_char; AV_ERROR_MAX_STRING_SIZE as usize]; 27] =
     [[0; AV_ERROR_MAX_STRING_SIZE as usize]; 27];
-
-pub fn register_all() {
-    unsafe {
-        av_strerror(
-            Error::Bug.into(),
-            STRINGS[index(&Error::Bug)].as_mut_ptr(),
-            AV_ERROR_MAX_STRING_SIZE,
-        );
-        av_strerror(
-            Error::Bug2.into(),
-            STRINGS[index(&Error::Bug2)].as_mut_ptr(),
-            AV_ERROR_MAX_STRING_SIZE,
-        );
-        av_strerror(
-            Error::Unknown.into(),
-            STRINGS[index(&Error::Unknown)].as_mut_ptr(),
-            AV_ERROR_MAX_STRING_SIZE,
-        );
-        av_strerror(
-            Error::Experimental.into(),
-            STRINGS[index(&Error::Experimental)].as_mut_ptr(),
-            AV_ERROR_MAX_STRING_SIZE,
-        );
-        av_strerror(
-            Error::BufferTooSmall.into(),
-            STRINGS[index(&Error::BufferTooSmall)].as_mut_ptr(),
-            AV_ERROR_MAX_STRING_SIZE,
-        );
-        av_strerror(
-            Error::Eof.into(),
-            STRINGS[index(&Error::Eof)].as_mut_ptr(),
-            AV_ERROR_MAX_STRING_SIZE,
-        );
-        av_strerror(
-            Error::Exit.into(),
-            STRINGS[index(&Error::Exit)].as_mut_ptr(),
-            AV_ERROR_MAX_STRING_SIZE,
-        );
-        av_strerror(
-            Error::External.into(),
-            STRINGS[index(&Error::External)].as_mut_ptr(),
-            AV_ERROR_MAX_STRING_SIZE,
-        );
-        av_strerror(
-            Error::InvalidData.into(),
-            STRINGS[index(&Error::InvalidData)].as_mut_ptr(),
-            AV_ERROR_MAX_STRING_SIZE,
-        );
-        av_strerror(
-            Error::PatchWelcome.into(),
-            STRINGS[index(&Error::PatchWelcome)].as_mut_ptr(),
-            AV_ERROR_MAX_STRING_SIZE,
-        );
-
-        av_strerror(
-            Error::InputChanged.into(),
-            STRINGS[index(&Error::InputChanged)].as_mut_ptr(),
-            AV_ERROR_MAX_STRING_SIZE,
-        );
-        av_strerror(
-            Error::OutputChanged.into(),
-            STRINGS[index(&Error::OutputChanged)].as_mut_ptr(),
-            AV_ERROR_MAX_STRING_SIZE,
-        );
-
-        av_strerror(
-            Error::BsfNotFound.into(),
-            STRINGS[index(&Error::BsfNotFound)].as_mut_ptr(),
-            AV_ERROR_MAX_STRING_SIZE,
-        );
-        av_strerror(
-            Error::DecoderNotFound.into(),
-            STRINGS[index(&Error::DecoderNotFound)].as_mut_ptr(),
-            AV_ERROR_MAX_STRING_SIZE,
-        );
-        av_strerror(
-            Error::DemuxerNotFound.into(),
-            STRINGS[index(&Error::DemuxerNotFound)].as_mut_ptr(),
-            AV_ERROR_MAX_STRING_SIZE,
-        );
-        av_strerror(
-            Error::EncoderNotFound.into(),
-            STRINGS[index(&Error::EncoderNotFound)].as_mut_ptr(),
-            AV_ERROR_MAX_STRING_SIZE,
-        );
-        av_strerror(
-            Error::OptionNotFound.into(),
-            STRINGS[index(&Error::OptionNotFound)].as_mut_ptr(),
-            AV_ERROR_MAX_STRING_SIZE,
-        );
-        av_strerror(
-            Error::MuxerNotFound.into(),
-            STRINGS[index(&Error::MuxerNotFound)].as_mut_ptr(),
-            AV_ERROR_MAX_STRING_SIZE,
-        );
-        av_strerror(
-            Error::FilterNotFound.into(),
-            STRINGS[index(&Error::FilterNotFound)].as_mut_ptr(),
-            AV_ERROR_MAX_STRING_SIZE,
-        );
-        av_strerror(
-            Error::ProtocolNotFound.into(),
-            STRINGS[index(&Error::ProtocolNotFound)].as_mut_ptr(),
-            AV_ERROR_MAX_STRING_SIZE,
-        );
-        av_strerror(
-            Error::StreamNotFound.into(),
-            STRINGS[index(&Error::StreamNotFound)].as_mut_ptr(),
-            AV_ERROR_MAX_STRING_SIZE,
-        );
-
-        av_strerror(
-            Error::HttpBadRequest.into(),
-            STRINGS[index(&Error::HttpBadRequest)].as_mut_ptr(),
-            AV_ERROR_MAX_STRING_SIZE,
-        );
-        av_strerror(
-            Error::HttpUnauthorized.into(),
-            STRINGS[index(&Error::HttpUnauthorized)].as_mut_ptr(),
-            AV_ERROR_MAX_STRING_SIZE,
-        );
-        av_strerror(
-            Error::HttpForbidden.into(),
-            STRINGS[index(&Error::HttpForbidden)].as_mut_ptr(),
-            AV_ERROR_MAX_STRING_SIZE,
-        );
-        av_strerror(
-            Error::HttpNotFound.into(),
-            STRINGS[index(&Error::HttpNotFound)].as_mut_ptr(),
-            AV_ERROR_MAX_STRING_SIZE,
-        );
-        av_strerror(
-            Error::HttpOther4xx.into(),
-            STRINGS[index(&Error::HttpOther4xx)].as_mut_ptr(),
-            AV_ERROR_MAX_STRING_SIZE,
-        );
-        av_strerror(
-            Error::HttpServerError.into(),
-            STRINGS[index(&Error::HttpServerError)].as_mut_ptr(),
-            AV_ERROR_MAX_STRING_SIZE,
-        );
-    }
-}
 
 impl error::Error for Error {}
 
