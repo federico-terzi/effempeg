@@ -4,7 +4,7 @@ use libc::c_int;
 
 use super::Parameters;
 use super::{decoder::Decoder, encoder::Encoder, threading, Compliance, Debug, Flags, Id};
-use crate::{ffi::*, media, Codec, Error, Rational};
+use crate::{ffi::*, media, ChannelLayout, Codec, Error, Rational};
 
 pub struct Context {
     ptr: *mut AVCodecContext,
@@ -138,6 +138,18 @@ impl Context {
     pub fn set_frame_rate<R: Into<Rational>>(&mut self, value: Option<R>) {
         unsafe {
             (*self.as_mut_ptr()).framerate = value.map(Into::into).unwrap_or(Rational::ZERO).into();
+        }
+    }
+
+    #[inline]
+    pub fn channel_layout(&self) -> ChannelLayout {
+        unsafe { ChannelLayout::from((*self.as_ptr()).ch_layout) }
+    }
+
+    #[inline]
+    pub fn set_channel_layout(&mut self, value: ChannelLayout) {
+        unsafe {
+            (*self.as_mut_ptr()).ch_layout = value.into();
         }
     }
 }

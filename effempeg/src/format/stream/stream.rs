@@ -4,10 +4,11 @@ use libc::c_int;
 
 use super::Disposition;
 use crate::{
+    channel_layout::ChannelOrder,
     codec::{self, packet, Decoder},
     ffi::*,
     format::context::common::Context,
-    DictionaryRef, Discard, Error, Rational,
+    ChannelLayout, DictionaryRef, Discard, Error, Rational,
 };
 
 #[derive(Debug)]
@@ -137,6 +138,14 @@ impl<'a> Stream<'a> {
         dec.set_parameters(params)?;
         dec.set_time_base(self.time_base());
         dec.set_frame_rate(self.guess_frame_rate());
+
+        // Sometimes the decoder is opened with unspecified channel layout,
+        // and that causes the resampler to fail.
+        // So I'm setting the layout as in this example: https://ffmpeg.org/doxygen/6.0/decode_filter_audio_8c-example.html
+        if dec.channel_layout().order() == ChannelOrder::Unspecified {
+            let channel_layout = ChannelLayout::default(dec.channel_layout().channels());
+            dec.set_channel_layout(channel_layout);
+        }
 
         Ok(dec)
     }
