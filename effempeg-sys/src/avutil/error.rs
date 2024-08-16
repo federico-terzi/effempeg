@@ -24,7 +24,12 @@ macro_rules! FFERRTAG {
     };
 }
 
+#[cfg(not(target_os = "windows"))]
 pub const AVERROR_EAGAIN: c_int = -35;
+
+#[cfg(target_os = "windows")]
+pub const AVERROR_EAGAIN: c_int = -11;
+
 pub const AVERROR_BSF_NOT_FOUND: c_int = FFERRTAG!(0xF8, b'B', b'S', b'F');
 pub const AVERROR_BUG: c_int = FFERRTAG!(b'B', b'U', b'G', b'!');
 pub const AVERROR_BUFFER_TOO_SMALL: c_int = FFERRTAG!(b'B', b'U', b'F', b'S');
