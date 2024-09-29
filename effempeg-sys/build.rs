@@ -14,6 +14,10 @@ fn output() -> PathBuf {
 }
 
 fn get_target() -> String {
+    if let Some(target) = std::env::var_os("CARGO_BUILD_TARGET") {
+        return target.to_string_lossy().to_string();
+    }
+
     let output = Command::new("rustc").arg("-vV").output().unwrap();
     let output = std::str::from_utf8(&output.stdout).unwrap();
 
