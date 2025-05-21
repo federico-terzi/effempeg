@@ -17,11 +17,18 @@ pub struct Definition {
     pub rate: u32,
 }
 
+#[derive(Clone)]
+pub struct ResamplingMatrix {
+    pub matrix: Vec<f64>,
+    pub stride: i32,
+}
+
 pub struct Context {
     ptr: *mut SwrContext,
 
     input: Definition,
     output: Definition,
+    matrix: Option<ResamplingMatrix>,
 }
 
 unsafe impl Send for Context {}
@@ -46,7 +53,20 @@ impl Context {
         src_rate: u32,
         dst_format: format::Sample,
         dst_channel_layout: ChannelLayout,
+        dst_rate: u32
+    ) -> Result<Self, Error> {
+        Self::get_with_matrix(src_format, src_channel_layout, src_rate, dst_format, dst_channel_layout, dst_rate, None)
+    }
+
+    /// Create a resampler with the given definitions.
+    pub fn get_with_matrix(
+        src_format: format::Sample,
+        src_channel_layout: ChannelLayout,
+        src_rate: u32,
+        dst_format: format::Sample,
+        dst_channel_layout: ChannelLayout,
         dst_rate: u32,
+        matrix: Option<ResamplingMatrix>,
     ) -> Result<Self, Error> {
         unsafe {
             let mut ctx = ptr::null_mut::<SwrContext>();
@@ -81,6 +101,10 @@ impl Context {
             }
 
             if !ctx.is_null() {
+                if let Some(matrix) = &matrix {
+                    swr_set_matrix(ctx, matrix.matrix.as_ptr(), matrix.stride);
+                }
+
                 match swr_init(ctx) {
                     e if e < 0 => Err(Error::from(e)),
 
@@ -98,6 +122,8 @@ impl Context {
                             channel_layout: dst_channel_layout,
                             rate: dst_rate,
                         },
+
+                        matrix,
                     }),
                 }
             } else {
