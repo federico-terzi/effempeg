@@ -32,7 +32,7 @@ jobs:
       - name: Installing dependencies
         shell: msys2 {0}
         run: |
-          pacman -S --noconfirm make
+          pacman -S --noconfirm make mingw-w64-x264
           which make
       - name: Preparing configuration
         shell: "bash"
@@ -111,7 +111,7 @@ jobs:
 
   build-macos:
     name: Build FFMpeg MacOS
-    runs-on: macos-12
+    runs-on: macos-13
     permissions:
       contents: write
     strategy:
