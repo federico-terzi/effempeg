@@ -51,8 +51,13 @@ STANDARD_ARGS = [
   "--enable-swscale",
 ]
 
+LIBX264_ARGS = STANDARD_ARGS + [
+  "--enable-libx264",
+]
+
 CONFIGURATIONS = {
   "standard": STANDARD_ARGS,
+  "libx264": LIBX264_ARGS,
 }
 
 def build():

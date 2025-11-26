@@ -3,6 +3,8 @@ use std::{io::Cursor, path::PathBuf, process::Command};
 fn get_configuration() -> String {
     if cfg!(feature = "standard") {
         "standard".to_string()
+    } else if cfg!(feature = "libx264") {
+        "libx264".to_string()
     } else {
         println!("falling back to standard mode");
         "standard".to_string()

@@ -15,7 +15,7 @@ jobs:
       contents: write
     strategy:
       matrix:
-        configuration: ["standard"]
+        configuration: ["standard", "libx264"]
         arch: ["x86_64"]
     steps:
       - uses: actions/checkout@v2
@@ -116,7 +116,7 @@ jobs:
       contents: write
     strategy:
       matrix:
-        configuration: ["standard"]
+        configuration: ["standard", "libx264"]
         arch: ["x86_64", "arm64"]
     steps:
       - uses: actions/checkout@v2

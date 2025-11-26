@@ -10,6 +10,7 @@ license = "WTFPL"
 default = ["standard"]
 
 standard = ["effempeg-sys/standard"]
+libx264 = ["effempeg-sys/libx264"]
 
 [dependencies]
 libc      = "0.2"
