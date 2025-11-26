@@ -130,7 +130,7 @@ jobs:
         uses: Homebrew/actions/setup-homebrew@185247228b4c622139b94e77b9b92e977dc8e074
       - name: Install FFmpeg dependencies
         run: |
-          brew install nasm
+          brew install nasm x264
       - name: Preparing configuration
         run: |
           python configure.py ${{ matrix.configuration }} ${{matrix.arch}}
